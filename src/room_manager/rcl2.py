@@ -9,34 +9,45 @@ class RoomManagerRCL2(AbstractRoomManager):
         spawn = get_first_spawn(room)
         if not spawn.spawning:
             if room.energyCapacityAvailable < 550:  # extensions were not built yet
-                return RoomManagerRCL1(room, self.creep_registry).spawn_creeps()  # keep RCL1 layout until they build up the extensions
-            if self.creep_registry.count_of_type(room, 'builder') < 4:  # TODO: all like this
+                return self.spawn_creeps_in_transition_period()
+            elif self.creep_registry.count_of_type(room, 'builder') < 4:  # TODO: all like this
                 if room.energyAvailable >= 550:
                     spawn.createCreep([WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], "", {cls: 'builder'})
-                    return
-            if self.creep_registry.count_of_type(room, 'miner') < len(room.sources):  # 2
+            elif self.creep_registry.count_of_type(room, 'miner') < len(room.sources):  # 2
                 if room.energyAvailable >= 550:
                     spawn.createCreep([WORK, WORK, WORK, WORK, MOVE], "", {cls: 'miner'})
-                    return
-            if self.creep_registry.count_of_type(room, 'hauler') < len(room.sources):  # TODO: ? 2
+            elif self.creep_registry.count_of_type(room, 'hauler') < len(room.sources):  # TODO: ? 2
                 if room.energyAvailable >= 550:
                     spawn.createCreep([WORK, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE], "", {cls: 'hauler'})
-                    return
-            if self.creep_registry.count_of_type(room, 'upgrader') < 3:  # TODO: ? 3
+            elif self.creep_registry.count_of_type(room, 'upgrader') < 3:  # TODO: ? 3
                 if room.energyAvailable >= 550:
                     spawn.createCreep([WORK, WORK, WORK, WORK, CARRY, MOVE, MOVE], "", {cls: 'upgrader'})
-                    return
             # total of 7, so 0.2*7 = 1.4 CPU/tick - decisions
+
+    def spawn_creeps_in_transition_period(self):
+        if room.energyCapacityAvailable == 300:
+            return RoomManagerRCL1(room, self.creep_registry).spawn_creeps()  # keep RCL1 layout until they build up the extensions
+        elif room.energyCapacityAvailable == 350:
+            if self.creep_registry.count_of_type(room, 'harvester') < RoomManagerRCL1.MAX_HARVESTERS:  # keep spawning them, why not
+                if room.energyAvailable >= 350:
+                    spawn.createCreep([WORK, CARRY, CARRY, MOVE, MOVE, MOVE], "", {'cls': 'harvester'})
+        elif room.energyCapacityAvailable == 450:
+            if self.creep_registry.count_of_type(room, 'harvester') < RoomManagerRCL1.MAX_HARVESTERS:  # keep spawning them, why not
+                if room.energyAvailable >= 450:
+                    spawn.createCreep([WORK, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], "", {'cls': 'harvester'})
+        elif room.energyCapacityAvailable == 500:
+            if self.creep_registry.count_of_type(room, 'harvester') < RoomManagerRCL1.MAX_HARVESTERS:  # keep spawning them, why not
+                if room.energyAvailable >= 500:
+                    spawn.createCreep([WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], "", {'cls': 'harvester'})
 
     def build(self):
         room = self.room
         if room.energyCapacityAvailable < 550:  # all extensions were not built yet
-            #   S
-            #   r
-            # ere
             #eree
+            # ere
+            #   r
+            #   S
             spawn_pos = get_first_spawn(room).pos
-            print('spawn_pos', room, spawn_pos.x, spawn_pos.y-2)
             room.getPositionAt(spawn_pos.x, spawn_pos.y-2).createConstructionSite(STRUCTURE_EXTENSION)
             room.getPositionAt(spawn_pos.x, spawn_pos.y-3).createConstructionSite(STRUCTURE_EXTENSION)
             room.getPositionAt(spawn_pos.x-1, spawn_pos.y-3).createConstructionSite(STRUCTURE_EXTENSION)
