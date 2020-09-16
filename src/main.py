@@ -1,6 +1,5 @@
-import collections
-
 from creeps import CREEP_CLASSES
+from creeps.harvester import Harvester
 from room_manager import MANAGER_REGISTRY
 
 # defs is a package which claims to export all constants and some JavaScript objects, but in reality does
@@ -22,11 +21,22 @@ __pragma__('noalias', 'update')
 
 
 class CreepRegistry:
-    # TODO: this class can be used to build roads and stuff
     def __init__(self):
-        self.by_room = collections.defaultdict(list)
+        self.by_room = {}
+    def count_of_type(self, room, creep_type):
+        if room not in self.by_room:
+            return 0
+        room_creeps = self.by_room[room]
+        result = 0
+        for creep in room_creeps:
+            if creep.memory.cls == creep_type:
+                result += 1
+        #print('CreepRegistry.count_of_type(', room, creep_type, '):', result)
+        return result
     def register(self, room, creep):
-        self.by_room[room].append(creep)
+        if room not in self.by_room:
+            self.by_room[room] = set()
+        self.by_room[room].add(creep)
 
 
 def main():
@@ -44,9 +54,11 @@ def main():
     for name in Object.keys(Game.creeps):
         creep = Game.creeps[name]
         creep_registry.register(creep.room, creep)
-        actions = CREEP_CLASSES[creep.memory.cls].run(creep)
+        creep_class = CREEP_CLASSES[creep.memory.cls]
+        #print('running', creep_class.__name__, 'for', creep)
+        actions = creep_class.run(creep)
         all_actions.append(actions)
-
+    print('creeps done')
     # Get the number of our creeps in the room.
     #num_creeps = _.sum(Game.creeps, lambda c: c.pos.roomName == spawn.pos.roomName)
 
@@ -54,10 +66,12 @@ def main():
     for name in Object.keys(Game.spawns):
         spawn = Game.spawns[name]
         my_rooms.add(spawn.room)
+    print('after rooms done, room count:', len(my_rooms))
 
     for room in my_rooms:
         manager_class = MANAGER_REGISTRY[room.controller.level]
         manager = manager_class(room, creep_registry)
+        print("before", manager_class.__name__, room)
         all_actions.extend(manager.run())
     execute_actions(all_actions)
 
@@ -65,10 +79,10 @@ def main():
 def execute_actions(all_actions):
     all_actions.sort(key=lambda action_set: max(action.priority for action in action_set), reversed=True)
     for action_set in all_actions:
-        if Cpu.limit < len(action_set)*0.2:
+        if Game.cpu.limit < len(action_set)*0.2:
             print('ran out of CPU before running %s' % action_set)
             break
-        for action in actions_set:
+        for action in action_set:
             action.run()
 
 

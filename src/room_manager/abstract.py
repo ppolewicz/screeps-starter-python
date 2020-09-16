@@ -5,6 +5,7 @@ class AbstractRoomManager:
 
     def run(self):
         self.spawn_creeps()
+        print('after spawn creeps', self.room)
         self.build()
         action_sets = []
         return action_sets

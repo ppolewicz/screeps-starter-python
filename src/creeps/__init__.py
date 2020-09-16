@@ -1,12 +1,12 @@
-#from builder import Builder
-from harvester import Harvester
-#from miner import Miner
-#from upgrader import Upgrader
+#from creeps.builder import Builder
+from creeps.harvester import Harvester
+#from creeps.miner import Miner
+#from creeps.upgrader import Upgrader
 
 
-CREEP_CLASSES = {
-    #'builder': Builder,
+CREEP_CLASSES = dict({
+#    'builder': Builder,
     'harvester': Harvester,
-    #'miner': Miner,
-    #'upgrader': Upgrader,
-}
+#    'miner': Miner,
+#    'upgrader': Upgrader,
+})

@@ -1,11 +1,15 @@
-from abstract import AbstractRoomManager
+from room_manager.abstract import AbstractRoomManager
+from utils import get_first_spawn
+
 
 class RoomManagerRCL1(AbstractRoomManager):
     def spawn_creeps(self):
-        if not self.room.spawns[0].spawning:
-            if len(creep_registry[room]['harvester']) < 4:
-                if self.room.energyAvailable >= 300:  # wait until source is full (there are no extensions)
-                    self.spawns[0].createCreep([WORK, CARRY, MOVE, MOVE, MOVE], "", {memory: {cls: 'harvester'}})
+        room = self.room
+        spawn = get_first_spawn(room)
+        if not spawn.spawning:
+            if self.creep_registry.count_of_type(room, 'harvester') < 4:
+                if room.energyAvailable >= 300:  # wait until source is full (there are no extensions)
+                    spawn.createCreep([WORK, CARRY, MOVE, MOVE, MOVE], "", {'cls': 'harvester'})
 
     def build(self):
         pass  # do literally nothing
