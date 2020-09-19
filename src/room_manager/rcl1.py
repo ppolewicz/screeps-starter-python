@@ -3,7 +3,7 @@ from utils import get_first_spawn
 
 
 class RoomManagerRCL1(AbstractRoomManager):
-    MAX_HARVESTERS = 5
+    MAX_HARVESTERS = 8
     def spawn_creeps(self):
         room = self.room
         spawn = get_first_spawn(room)

@@ -1,4 +1,5 @@
 from room_manager.rcl2 import RoomManagerRCL2
+from utils import get_first_spawn
 
 
 class RoomManagerRCL3(RoomManagerRCL2):

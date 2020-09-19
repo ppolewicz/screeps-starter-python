@@ -4,6 +4,21 @@ def get_first_spawn(room):
     for spawn_id in room.spawns:
         return room.spawns[spawn_id]
 
+
+def search_room(room, kind, filter_function=lambda x: True):
+    result_list = []
+    for item in room.find(kind):
+        if filter_function(item):
+            result_list.append(item)
+    return result_list
+
+
+def get_thing_at_coordinates(things, x, y):
+    for thing in things:
+        if x == thing.pos.x and y == thing.pos.y:
+            return thing
+
+
 ERRORS = {
     0: 'OK',
     -1: 'ERR_NOT_OWNER',

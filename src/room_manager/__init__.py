@@ -7,7 +7,7 @@ MANAGER_REGISTRY = [
     None,  # TODO: controlling rooms with level=0
     RoomManagerRCL1,
     RoomManagerRCL2,
-    RoomManagerRCL3,
+    RoomManagerRCL2,  #TODO RoomManagerRCL3,
     RoomManagerRCL3,
     RoomManagerRCL3,
     RoomManagerRCL3,

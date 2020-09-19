@@ -15,10 +15,6 @@ from creeps.abstract import AbstractCreep
 
 class Harvester(AbstractCreep):
     @classmethod
-    def energy(cls, creep):  # TODO other res
-        return _.sum(creep.carry)
-
-    @classmethod
     def run(cls, creep):
         # If we're full, stop filling up and remove the saved source
         if creep.memory.filling and cls.energy(creep) >= creep.carryCapacity:
@@ -35,8 +31,9 @@ class Harvester(AbstractCreep):
         # If we have a saved target, use it
         if creep.memory.target:
             target = Game.getObjectById(creep.memory.target)
-            if target.energy == target.energyCapacity:  # full already
-                del creep.memory.target
+            if not target:
+                target = cls.get_new_target(creep)
+            elif target.energy != undefined and target.energy == target.energyCapacity:  # a full container
                 target = cls.get_new_target(creep)
         else:
             target = cls.get_new_target(creep)
@@ -47,6 +44,7 @@ class Harvester(AbstractCreep):
             is_close = creep.pos.inRangeTo(target, 3)
 
         def reset_target():
+            print(creep, "reset_target()")
             del creep.memory.target
         if not is_close:
             return [ScheduledAction.moveTo(creep, target, on_error=reset_target)]
@@ -68,31 +66,35 @@ class Harvester(AbstractCreep):
 
     @classmethod
     def get_new_target(cls, creep):
-        extensions_to_build = []
-        sites = creep.room.find(FIND_CONSTRUCTION_SITES)
-        for site in sites:
-            if site.structureType != STRUCTURE_EXTENSION:
-                continue
-            extensions_to_build.append(site)
-        if extensions_to_build:
-            target = extensions_to_build[0]
-            return target
-
-        if creep.room.controller.level == 1:
-            # in RCL1 we don't want to fill the spawn, it will fill by itself in 300t and there is nothing else to fill, really
-            target = creep.room.controller
-        else:
-            target_filter = lambda s: (
-                (
-                    s.structureType == STRUCTURE_SPAWN or
-                    s.structureType == STRUCTURE_EXTENSION or
-                    s.structureType == STRUCTURE_TOWER  # somehow ;)
-                )
-                and s.energy < s.energyCapacity
-            )
-            # Get a random new target.
-            target = _(creep.room.find(FIND_MY_STRUCTURES)).filter(target_filter).sample()
-            if not target:
-                target = creep.room.controller
+        target = cls._get_new_target(creep)
         creep.memory.target = target.id
         return target
+
+    @classmethod
+    def _get_new_target(cls, creep):
+        if creep.room.controller.level == 1:
+            # in RCL1 we don't want to fill the spawn, it will fill by itself in 300t and there is nothing else to fill, really
+            return creep.room.controller
+
+        target_filter = lambda s: (
+            (
+                s.structureType == STRUCTURE_SPAWN or
+                s.structureType == STRUCTURE_EXTENSION or
+                s.structureType == STRUCTURE_TOWER  # somehow ;)
+            )
+            and s.energy < s.energyCapacity
+        )
+        target = _(creep.room.find(FIND_MY_STRUCTURES)).filter(target_filter).sample()  # TODO: reserve it so that everyone doesn't run to the same thing
+        if target:
+            return target
+
+        sites = creep.room.find(FIND_CONSTRUCTION_SITES)
+        def distanceFromCreep(site):
+            return max(abs(site.pos.x-creep.pos.x), abs(site.pos.y-creep.pos.y))
+        sites.sort(key=distanceFromCreep)
+        for site in sites:
+            #if site.structureType != STRUCTURE_EXTENSION and site.structureType != STRUCTURE_ROAD:
+            #    continue
+            return site
+
+        return creep.room.controller

@@ -30,12 +30,18 @@ class ActionExecution:
             result = self.upgradeController()
         elif self.method == 'transfer':
             result = self.transfer()
+        elif self.method == 'withdraw':
+            result = self.withdraw()
+        elif self.method == 'pickup':
+            result = self.pickup()
         else:
             assert False, 'unknown action'
         if result != OK:
             if self.on_error:
                 self.on_error()
             else:
+                del self.creep.memory.target
+                del self.creep.memory.source
                 print('ERROR', self, ERRORS[result])
     def build(self):
         return self.creep.build(self.args[0])
@@ -45,11 +51,17 @@ class ActionExecution:
         if self.creep.fatigue > 0:
             return OK  # TODO: some other feeback here
         where = self.args[0]
-        return self.creep.moveTo(where)
+        return self.creep.moveTo(where, {'visualizePathStyle': {}})
     def upgradeController(self):
         return self.creep.upgradeController(self.args[0])
     def transfer(self):
         return self.creep.transfer(self.args[0], self.args[1])
+    def withdraw(self):
+        print('withdraw', self.creep, self.args[0], self.args[1])
+        return self.creep.withdraw(self.args[0], self.args[1])
+    def pickup(self):
+        print('pickup', self.creep, self.args[0])
+        return self.creep.pickup(self.args[0])
     def __str__(self):
         return '[{}] {}.{} {} (on_error={})'.format(
             self.priority,

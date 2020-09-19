@@ -31,7 +31,7 @@ class CreepRegistry:
         for creep in room_creeps:
             if creep.memory.cls == creep_type:
                 result += 1
-        #print('CreepRegistry.count_of_type(', room, creep_type, '):', result)
+        print('CreepRegistry.count_of_type(', room, creep_type, '):', result)
         return result
     def register(self, room, creep):
         if room not in self.by_room:
@@ -52,9 +52,16 @@ def main():
     all_actions = []
     # Run each creep
     for name in Object.keys(Game.creeps):
+        #if name == 'Stella':
+        #    # Game.creeps['Stella'].moveTo(Game.creeps['Stella'].room.controller)
+        #    # Game.creeps['Stella'].signController(Game.creeps['Stella'].room.controller, '')
+        #    continue
         creep = Game.creeps[name]
         creep_registry.register(creep.room, creep)
         creep_class = CREEP_CLASSES[creep.memory.cls]
+        if not creep_class:
+            #print('ERROR, NO CREEP CLASS FOR', creep.memory.cls)
+            creep_class = CREEP_CLASSES['harvester']
         #print('running', creep_class.__name__, 'for', creep)
         actions = creep_class.run(creep)
         all_actions.append(actions)

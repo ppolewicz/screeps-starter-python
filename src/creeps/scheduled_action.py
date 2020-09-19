@@ -33,3 +33,11 @@ class ScheduledAction:
     @classmethod
     def transfer(cls, creep, target, what, on_error=None, priority=100):
         return ActionExecution(creep, 'transfer', target, what, on_error, priority=priority)
+
+    @classmethod
+    def pickup(cls, creep, target, on_error=None, priority=100):
+        return ActionExecution(creep, 'pickup', target, on_error, priority=priority)
+
+    @classmethod
+    def withdraw(cls, creep, target, what, on_error=None, priority=100):
+        return ActionExecution(creep, 'withdraw', target, what, on_error, priority=priority)
