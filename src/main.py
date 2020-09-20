@@ -31,7 +31,7 @@ class CreepRegistry:
         for creep in room_creeps:
             if creep.memory.cls == creep_type:
                 result += 1
-        print('CreepRegistry.count_of_type(', room, creep_type, '):', result)
+        #print('CreepRegistry.count_of_type(', room, creep_type, '):', result)
         return result
     def register(self, room, creep):
         if room not in self.by_room:
@@ -57,6 +57,8 @@ def main():
         #    # Game.creeps['Stella'].signController(Game.creeps['Stella'].room.controller, '')
         #    continue
         creep = Game.creeps[name]
+        if creep.spawning:
+            continue
         creep_registry.register(creep.room, creep)
         creep_class = CREEP_CLASSES[creep.memory.cls]
         if not creep_class:
@@ -64,8 +66,9 @@ def main():
             creep_class = CREEP_CLASSES['harvester']
         #print('running', creep_class.__name__, 'for', creep)
         actions = creep_class.run(creep)
+        #print('actions for', creep, 'are', actions)
         all_actions.append(actions)
-    print('creeps done')
+    #print('creeps done')
     # Get the number of our creeps in the room.
     #num_creeps = _.sum(Game.creeps, lambda c: c.pos.roomName == spawn.pos.roomName)
 
@@ -73,20 +76,21 @@ def main():
     for name in Object.keys(Game.spawns):
         spawn = Game.spawns[name]
         my_rooms.add(spawn.room)
-    print('after rooms done, room count:', len(my_rooms))
+    #print('after rooms done, room count:', len(my_rooms))
 
     for room in my_rooms:
         manager_class = MANAGER_REGISTRY[room.controller.level]
         manager = manager_class(room, creep_registry)
-        print("before", manager_class.__name__, room)
+        #print("before", manager_class.__name__, room)
         all_actions.extend(manager.run())
     execute_actions(all_actions)
+    print('--------', Game.cpu.getUsed())
 
 
 def execute_actions(all_actions):
     all_actions.sort(key=lambda action_set: max(action.priority for action in action_set), reversed=True)
     for action_set in all_actions:
-        if Game.cpu.limit < len(action_set)*0.2:
+        if Game.cpu.tickLimit < len(action_set)*0.2:
             print('ran out of CPU before running %s' % action_set)
             break
         for action in action_set:

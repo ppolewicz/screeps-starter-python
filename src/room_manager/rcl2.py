@@ -23,7 +23,13 @@ class RoomManagerRCL2(AbstractRoomManager):
             #elif self.creep_registry.count_of_type(room, 'hauler') < 2: #TODO len(room.sources):  # TODO: ? 2
             #    if room.energyAvailable >= 550:
             #        spawn.createCreep([WORK, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE], "", {'cls': 'hauler'})
-            elif self.creep_registry.count_of_type(room, 'upgrader') < 3:  # TODO: ? 3
+            elif self.creep_registry.count_of_type(room, 'hauler') < 1:
+                if room.energyAvailable >= 550:
+                    # TODO: scale it to the room size
+                    parts = [CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE]
+                    spawn.createCreep(parts, "", {'cls': 'hauler'})
+                    return
+            elif self.creep_registry.count_of_type(room, 'upgrader') < 12:  # TODO: ? 3
                 if room.energyAvailable >= 550:
                     spawn.createCreep([WORK, WORK, WORK, WORK, CARRY, MOVE, MOVE], "", {'cls': 'upgrader'})
             # total of 7, so 0.2*7 = 1.4 CPU/tick - decisions

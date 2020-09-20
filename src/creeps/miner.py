@@ -15,7 +15,7 @@ class Miner(AbstractCreep):
         room = creep.room
         sources = search_room(room, FIND_SOURCES)
         containers = search_room(room, FIND_STRUCTURES, lambda x: x.structureType == STRUCTURE_CONTAINER)
-        thing = get_thing_at_coordinates(containers, creep.pos.x, creep.pos.y)
+        thing = get_thing_at_coordinates(containers, creep.pos.x, creep.pos.y)  # TODO save CPU via lookAt
         if thing:
             for source in sources:
                 if creep.pos.isNearTo(source):
@@ -28,15 +28,20 @@ class Miner(AbstractCreep):
             #        return [ScheduledAction.harvest(creep, source)]
             path = creep.room.findPath(source.pos, creep.room.controller.pos, {'ignoreCreeps': True})
             where = path[0]
+            if creep.pos.isEqualTo(where.x, where.y):
+                # mine regardless of whether there is a container or not
+                # other creeps will come and pick it up, use it to build the container
+                return [ScheduledAction.harvest(creep, source)]
+
             thing = get_thing_at_coordinates(containers, where.x, where.y)
             if not thing:
-                # oops, no container? TODO switch to harvester logic
-                return
+                # oops, no container
+                # TODO: build it from here rather than waiting 100 ticks for a room to build, or maybe trigger the room planner?
+                return [ScheduledAction.moveTo(creep, room.getPositionAt(where.x, where.y))]  # go there anyway, we'll mine and someone will come build it
             who = room.lookForAt(LOOK_CREEPS, thing.pos)
-            if len(list(who) >= 1):
-                print('----', who)
-                continue
-            is_on_it = creep.pos.x == thing.pos.x and creep.pos.y == thing.pos.y
-            if not is_on_it:
-                return [ScheduledAction.moveTo(creep, thing)]
-            return [ScheduledAction.harvest(creep, source)]
+            if len(who) >= 1:
+                # some other creep is currently there
+                continue  # lets try another source
+            return [ScheduledAction.moveTo(creep, thing)]
+        print('WARNING', creep, 'has no source to mine')
+        return []

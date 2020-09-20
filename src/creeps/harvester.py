@@ -37,64 +37,34 @@ class Harvester(AbstractCreep):
                 target = cls.get_new_target(creep)
         else:
             target = cls.get_new_target(creep)
+
         # If we are targeting a spawn or extension, we need to be directly next to it - otherwise, we can be 3 away.
-        if target.energyCapacity:
+        if target.energyCapacity or target.store:
             is_close = creep.pos.isNearTo(target)
         else:
             is_close = creep.pos.inRangeTo(target, 3)
 
         def reset_target():
-            print(creep, "reset_target()")
+            print('WARNING', creep, "reset_target() had to be called on", creep.memory.target)
             del creep.memory.target
+
         if not is_close:
             return [ScheduledAction.moveTo(creep, target, on_error=reset_target)]
 
         # If we are targeting a spawn or extension, transfer energy. Otherwise, use upgradeController on it.
         if target.energyCapacity:
-            def clear_target():
-                del creep.memory.target
-            return [ScheduledAction.transfer(creep, target, RESOURCE_ENERGY, on_error=clear_target)]
-        else:
-            if target.structureType == STRUCTURE_CONTROLLER:
-                action = ScheduledAction.upgradeController(creep, target)
-                if creep.room.controller.ticksToDowngrade < 4000:
-                    action.priority = 1000
+            return [ScheduledAction.transfer(creep, target, RESOURCE_ENERGY, on_error=reset_target)]
+
+        # upgradeController
+        if target.structureType == STRUCTURE_CONTROLLER:
+            action = ScheduledAction.upgradeController(creep, target)
+            if creep.room.controller.ticksToDowngrade < 4000:
+                action.priority = 1000
             else:
-                action = ScheduledAction.build(creep, target)
-                action.priority = 200
+                action.priority = 20
             return [action]
 
-    @classmethod
-    def get_new_target(cls, creep):
-        target = cls._get_new_target(creep)
-        creep.memory.target = target.id
-        return target
-
-    @classmethod
-    def _get_new_target(cls, creep):
-        if creep.room.controller.level == 1:
-            # in RCL1 we don't want to fill the spawn, it will fill by itself in 300t and there is nothing else to fill, really
-            return creep.room.controller
-
-        target_filter = lambda s: (
-            (
-                s.structureType == STRUCTURE_SPAWN or
-                s.structureType == STRUCTURE_EXTENSION or
-                s.structureType == STRUCTURE_TOWER  # somehow ;)
-            )
-            and s.energy < s.energyCapacity
-        )
-        target = _(creep.room.find(FIND_MY_STRUCTURES)).filter(target_filter).sample()  # TODO: reserve it so that everyone doesn't run to the same thing
-        if target:
-            return target
-
-        sites = creep.room.find(FIND_CONSTRUCTION_SITES)
-        def distanceFromCreep(site):
-            return max(abs(site.pos.x-creep.pos.x), abs(site.pos.y-creep.pos.y))
-        sites.sort(key=distanceFromCreep)
-        for site in sites:
-            #if site.structureType != STRUCTURE_EXTENSION and site.structureType != STRUCTURE_ROAD:
-            #    continue
-            return site
-
-        return creep.room.controller
+        # build
+        action = ScheduledAction.build(creep, target)
+        action.priority = 200
+        return [action]

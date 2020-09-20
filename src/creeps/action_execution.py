@@ -57,10 +57,10 @@ class ActionExecution:
     def transfer(self):
         return self.creep.transfer(self.args[0], self.args[1])
     def withdraw(self):
-        print('withdraw', self.creep, self.args[0], self.args[1])
+        #print('withdraw', self.creep, self.args[0], self.args[1])
         return self.creep.withdraw(self.args[0], self.args[1])
     def pickup(self):
-        print('pickup', self.creep, self.args[0])
+        #print('pickup', self.creep, self.args[0])
         return self.creep.pickup(self.args[0])
     def __str__(self):
         return '[{}] {}.{} {} (on_error={})'.format(

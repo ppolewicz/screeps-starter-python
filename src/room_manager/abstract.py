@@ -2,7 +2,7 @@ from utils import get_first_spawn
 
 
 class AbstractRoomManager:
-    BUILD_SCHEDULE = 1  # try to build once every n ticks
+    BUILD_SCHEDULE = 100  # try to build once every n ticks
     def __init__(self, room, creep_registry):
         self.room = room
         self.creep_registry = creep_registry
