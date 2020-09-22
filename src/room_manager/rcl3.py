@@ -29,6 +29,6 @@ class RoomManagerRCL3(RoomManagerRCL2):
                     return
             # total of 5, so 0.2*5 = 1.0 CPU/tick - decisions but even less bc miner will be idle half the time
 
-    def build(self):
-        return super().build()
+    def run_build(self):
+        return super().run_build()
         # TODO build a turret if there is none here yet

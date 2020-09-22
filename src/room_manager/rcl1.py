@@ -12,5 +12,5 @@ class RoomManagerRCL1(AbstractRoomManager):
                 if room.energyAvailable >= 250:  # wait until source is full (there are no extensions)
                     spawn.createCreep([WORK, CARRY, MOVE, MOVE], "", {'cls': 'harvester'})
 
-    def build(self):
+    def run_build(self):
         pass  # do literally nothing

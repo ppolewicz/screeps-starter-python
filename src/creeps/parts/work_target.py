@@ -9,17 +9,8 @@ __pragma__('noalias', 'set')
 __pragma__('noalias', 'type')
 __pragma__('noalias', 'update')
 
-from creeps.scheduled_action import ScheduledAction
-
 
 class WorkTarget:
-    @classmethod
-    def get_new_target(cls, creep):
-        target = cls._get_new_target(creep)
-        print('new target for', creep, 'is', target)
-        creep.memory.target = target.id
-        return target
-
     @classmethod
     def _get_closest_construction_site(cls, creep):
         return creep.pos.findClosestByRange(FIND_CONSTRUCTION_SITES)
@@ -64,19 +55,17 @@ class WorkTarget:
         return containers[0]  # TODO: get a "random" one ha ha, maybe Creep.id + Game.time
 
 
-    @classmethod
-    def _get_new_target(cls, creep):
-        for target_getter in cls._get_target_getters(creep):
-        #for target_getter in cls.TARGET_GETTERS:
-            target = target_getter(creep)
+    def _get_new_target(self):
+        for target_getter in self._get_target_getters(self.creep):
+            target = target_getter(self.creep)
             if target:
                 return target
-        print('FATAL: no targets for', creep, 'and no default')
+        print('FATAL: no targets for', self.creep, '(', self.creep.memory.cls, ') and no default')
 
-    @classmethod
-    def get_new_target(cls, creep):
-        target = cls._get_new_target(creep)
-        print('new target for', creep, 'is', target)
-        creep.memory.target = target.id
-        return target
+    def get_new_target(self):
+        target = self._get_new_target()
+        if target:
+            print('new target for', self.creep, 'is', target)
+            self.creep.memory.target = target.id
+            return target
 

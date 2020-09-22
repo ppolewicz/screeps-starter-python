@@ -10,8 +10,10 @@ from utils import search_room
 
 
 class Miner(AbstractCreep):
-    @classmethod
-    def run(cls, creep):
+    ICON = '⛏️'
+    def _run(self):
+        super()._run()
+        creep = self.creep
         room = creep.room
         sources = search_room(room, FIND_SOURCES)
         containers = search_room(room, FIND_STRUCTURES, lambda x: x.structureType == STRUCTURE_CONTAINER)
@@ -33,15 +35,16 @@ class Miner(AbstractCreep):
                 # other creeps will come and pick it up, use it to build the container
                 return [ScheduledAction.harvest(creep, source)]
 
+            who = room.lookForAt(LOOK_CREEPS, where.x, where.y)
+            if len(who) >= 1:
+                # some other creep is currently there
+                if who[0].memory.cls == 'miner':  # and it's a miner!
+                    continue  # lets try another source
             thing = get_thing_at_coordinates(containers, where.x, where.y)
             if not thing:
                 # oops, no container
                 # TODO: build it from here rather than waiting 100 ticks for a room to build, or maybe trigger the room planner?
                 return [ScheduledAction.moveTo(creep, room.getPositionAt(where.x, where.y))]  # go there anyway, we'll mine and someone will come build it
-            who = room.lookForAt(LOOK_CREEPS, thing.pos)
-            if len(who) >= 1:
-                # some other creep is currently there
-                continue  # lets try another source
             return [ScheduledAction.moveTo(creep, thing)]
         print('WARNING', creep, 'has no source to mine')
         return []

@@ -18,6 +18,11 @@ def get_thing_at_coordinates(things, x, y):
         if x == thing.pos.x and y == thing.pos.y:
             return thing
 
+class P:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
 
 ERRORS = {
     0: 'OK',

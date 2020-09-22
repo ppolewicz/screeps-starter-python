@@ -14,10 +14,12 @@ from creeps.abstract import AbstractCreep
 
 
 class Harvester(AbstractCreep):
-    @classmethod
-    def run(cls, creep):
+    ICON = '☭'
+    def _run(self):
+        super()._run()
+        creep = self.creep
         # If we're full, stop filling up and remove the saved source
-        if creep.memory.filling and cls.energy(creep) >= creep.carryCapacity:
+        if creep.memory.filling and self.energy(creep) >= creep.carryCapacity:
             creep.memory.filling = False
             del creep.memory.source
         # If we're empty, start filling again and remove the saved target
@@ -26,17 +28,20 @@ class Harvester(AbstractCreep):
             del creep.memory.target
 
         if creep.memory.filling:
-            return cls.do_fill(creep)
+            return self.do_fill(creep)
 
         # If we have a saved target, use it
         if creep.memory.target:
             target = Game.getObjectById(creep.memory.target)
             if not target:
-                target = cls.get_new_target(creep)
+                target = self.get_new_target(creep)
             elif target.energy != undefined and target.energy == target.energyCapacity:  # a full container
-                target = cls.get_new_target(creep)
+                target = self.get_new_target(creep)
         else:
-            target = cls.get_new_target(creep)
+            target = self.get_new_target(creep)
+
+        if not target:
+            return []
 
         # If we are targeting a spawn or extension, we need to be directly next to it - otherwise, we can be 3 away.
         if target.energyCapacity or target.store:
@@ -65,6 +70,11 @@ class Harvester(AbstractCreep):
             return [action]
 
         # build
-        action = ScheduledAction.build(creep, target)
-        action.priority = 200
-        return [action]
+        if target.progressTotal:
+            action = ScheduledAction.build(creep, target)
+            action.priority = 200
+            return [action]
+        if target.store:
+            return [ScheduledAction.transfer(creep, target, RESOURCE_ENERGY, on_error=reset_target)]
+        print('ERROR: not sure what', creep, 'should do with', target)
+        return []

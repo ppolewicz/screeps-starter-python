@@ -1,5 +1,4 @@
 from creeps import CREEP_CLASSES
-from creeps.harvester import Harvester
 from room_manager import MANAGER_REGISTRY
 
 # defs is a package which claims to export all constants and some JavaScript objects, but in reality does
@@ -45,27 +44,33 @@ def main():
     """
 
     creep_registry = CreepRegistry()
+    imports = Game.cpu.getUsed()
 
     if Game.cpu.buffer > 9000:
         Game.cpu.generate_pixel()
 
     all_actions = []
-    # Run each creep
+    # Register each creep
+    creeps_to_do = []
     for name in Object.keys(Game.creeps):
         #if name == 'Stella':
         #    # Game.creeps['Stella'].moveTo(Game.creeps['Stella'].room.controller)
         #    # Game.creeps['Stella'].signController(Game.creeps['Stella'].room.controller, '')
         #    continue
         creep = Game.creeps[name]
+        creep_registry.register(creep.room, creep)
         if creep.spawning:
             continue
-        creep_registry.register(creep.room, creep)
+        creeps_to_do.append(creep)
+
+    # Run each creep
+    for creep in creeps_to_do:
         creep_class = CREEP_CLASSES[creep.memory.cls]
         if not creep_class:
             #print('ERROR, NO CREEP CLASS FOR', creep.memory.cls)
             creep_class = CREEP_CLASSES['harvester']
         #print('running', creep_class.__name__, 'for', creep)
-        actions = creep_class.run(creep)
+        actions = creep_class(creep, creep.name, creep_registry).run()
         #print('actions for', creep, 'are', actions)
         all_actions.append(actions)
     #print('creeps done')
@@ -80,21 +85,40 @@ def main():
 
     for room in my_rooms:
         manager_class = MANAGER_REGISTRY[room.controller.level]
-        manager = manager_class(room, creep_registry)
+        manager = manager_class(room, room.name, creep_registry, True)
         #print("before", manager_class.__name__, room)
         all_actions.extend(manager.run())
-    execute_actions(all_actions)
-    print('--------', Game.cpu.getUsed())
 
+    #Game.rooms['W25N1'].visual.circle(10,20).line(0,0,10,20)
+    #MANAGER_REGISTRY[2](room, room.name, creep_registry, False)
+
+    actions_cost = execute_actions(all_actions)
+    used = Game.cpu.getUsed()
+    print(
+        '-------- total:', round(used, 3),
+        'imports:', round(imports, 3),
+        'actions:', round(actions_cost, 3),
+        'code:', round(used-imports-actions_cost, 3),
+    )
+    if Game.time % 1500 == 0:
+        for name in Object.keys(Memory.creeps):
+            if not Game.creeps[name]:
+                print('Clearing non-existing creep memory(powered by python™): ' + name)
+                del Memory.creeps[name]
+
+    #<font color="red"></font>
 
 def execute_actions(all_actions):
     all_actions.sort(key=lambda action_set: max(action.priority for action in action_set), reversed=True)
+    total = 0
     for action_set in all_actions:
         if Game.cpu.tickLimit < len(action_set)*0.2:
             print('ran out of CPU before running %s' % action_set)
             break
         for action in action_set:
             action.run()
+            total += 0.2
+    return total
 
 
 module.exports.loop = main

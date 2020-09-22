@@ -1,6 +1,6 @@
 from utils import get_first_spawn
-from utils import get_thing_at_coordinates
 from utils import search_room
+from utils import P
 
 from room_manager.abstract import AbstractRoomManager
 from room_manager.rcl1 import RoomManagerRCL1
@@ -13,23 +13,26 @@ class RoomManagerRCL2(AbstractRoomManager):
         if not spawn.spawning:
             if room.energyCapacityAvailable < 550:  # extensions were not built yet
                 return self.spawn_creeps_in_transition_period()
-            elif self.creep_registry.count_of_type(room, 'builder') < 1:  # TODO: how many builders depends on site count
+
+            to_construct = sum([s.progressTotal - s.progress for s in room.find(FIND_CONSTRUCTION_SITES)])
+            builders = self.creep_registry.count_of_type(room, 'builder')
+            if to_construct > 3000 and builders < 2 or builders < 1:
                 # builders first to make containers for mining
                 if room.energyAvailable >= 550:
-                    spawn.createCreep([WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], "", {'cls': 'builder'})
+                    spawn.createCreep([WORK, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE], "", {'cls': 'builder'})
             elif self.creep_registry.count_of_type(room, 'miner') < 2: #TODO len(room.sources):  # 2
                 if room.energyAvailable >= 550:
                     spawn.createCreep([WORK, WORK, WORK, WORK, WORK, MOVE], "", {'cls': 'miner'})
             #elif self.creep_registry.count_of_type(room, 'hauler') < 2: #TODO len(room.sources):  # TODO: ? 2
             #    if room.energyAvailable >= 550:
             #        spawn.createCreep([WORK, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE], "", {'cls': 'hauler'})
-            elif self.creep_registry.count_of_type(room, 'hauler') < 1:
+            elif self.creep_registry.count_of_type(room, 'hauler') < 2:
                 if room.energyAvailable >= 550:
                     # TODO: scale it to the room size
                     parts = [CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE]
                     spawn.createCreep(parts, "", {'cls': 'hauler'})
                     return
-            elif self.creep_registry.count_of_type(room, 'upgrader') < 12:  # TODO: ? 3
+            elif self.creep_registry.count_of_type(room, 'upgrader') < 6:  # TODO: 3?
                 if room.energyAvailable >= 550:
                     spawn.createCreep([WORK, WORK, WORK, WORK, CARRY, MOVE, MOVE], "", {'cls': 'upgrader'})
             # total of 7, so 0.2*7 = 1.4 CPU/tick - decisions
@@ -62,57 +65,84 @@ class RoomManagerRCL2(AbstractRoomManager):
         (1, 0),
         (1, 1),
     )
-    def build(self):
+    def run_build(self):
         # TODO: don't do it every tick
         room = self.room
+        spawn_pos = get_first_spawn(room).pos
         # shaped farms first
         if room.energyCapacityAvailable < 550:  # all extensions were not built yet
             #eree
             # ere
             #   r
             #   S
-            spawn_pos = get_first_spawn(room).pos
-            # TODO: don't do that if site is already here
-            room.getPositionAt(spawn_pos.x,   spawn_pos.y-2).createConstructionSite(STRUCTURE_EXTENSION)
-            room.getPositionAt(spawn_pos.x,   spawn_pos.y-3).createConstructionSite(STRUCTURE_EXTENSION)
-            room.getPositionAt(spawn_pos.x-1, spawn_pos.y-3).createConstructionSite(STRUCTURE_EXTENSION)
-            room.getPositionAt(spawn_pos.x-2, spawn_pos.y-2).createConstructionSite(STRUCTURE_EXTENSION)
-            room.getPositionAt(spawn_pos.x-3, spawn_pos.y-3).createConstructionSite(STRUCTURE_EXTENSION)
 
-            room.getPositionAt(spawn_pos.x,   spawn_pos.y-1).createConstructionSite(STRUCTURE_ROAD)
-            room.getPositionAt(spawn_pos.x-1, spawn_pos.y-2).createConstructionSite(STRUCTURE_ROAD)
-            room.getPositionAt(spawn_pos.x-2, spawn_pos.y-3).createConstructionSite(STRUCTURE_ROAD)
-            return
-        # TODO: build roads automatically using self.creep_registry that has room stats and routes
+            self.build_extension(spawn_pos.x,   spawn_pos.y-2)
+            self.build_extension(spawn_pos.x,   spawn_pos.y-3)
+            self.build_extension(spawn_pos.x-1, spawn_pos.y-3)
+            self.build_extension(spawn_pos.x-2, spawn_pos.y-2)
+            self.build_extension(spawn_pos.x-3, spawn_pos.y-3)
+            if self.enable_building:
+                return
+
+        self.build_roads(
+            [
+                P(spawn_pos.x,   spawn_pos.y-1),
+                P(spawn_pos.x-1, spawn_pos.y-2),
+                P(spawn_pos.x-2, spawn_pos.y-3),
+            ]
+        )
 
         sources = search_room(room, FIND_SOURCES)
-        containers = search_room(room, FIND_STRUCTURES, lambda x: x.structureType == STRUCTURE_CONTAINER)
-        if len(containers) == len(sources) + 1:
-            return
-        container_sites = search_room(room, FIND_CONSTRUCTION_SITES, lambda x: x.structureType == STRUCTURE_CONTAINER)
-        if len(containers) + len(container_sites) == len(sources) + 1:
-            return
 
+        miner_containers = []
         for source in sources:
             path = room.findPath(source.pos, room.controller.pos, {'ignoreCreeps': True})
-            thing = get_thing_at_coordinates(containers, path[0].x, path[0].y)
-            if thing:
-                continue
-            thing = get_thing_at_coordinates(container_sites, path[0].x, path[0].y)
-            if thing:
-                continue
-            print('path[0]', path[0])
-            room.getPositionAt(path[0].x,   path[0].y).createConstructionSite(STRUCTURE_CONTAINER)
+            miner_containers.append(
+                self.build_container(path[0].x, path[0].y)
+            )
 
         # build a container next to controller
-        path = room.findPath(room.controller.pos, get_first_spawn(room).pos, {'ignoreCreeps': True})
-        thing = get_thing_at_coordinates(containers, path[1].x, path[1].y)
-        if thing:
-            return
-        thing = get_thing_at_coordinates(container_sites, path[1].x, path[1].y)
-        if thing:
-            return
-        room.getPositionAt(path[1].x, path[1].y).createConstructionSite(STRUCTURE_CONTAINER)
+        path = room.findPath(room.controller.pos, spawn_pos, {'ignoreCreeps': True})
+        controller_container = room.getPositionAt(path[1].x, path[1].y)
+
+        self.build_container(path[1].x, path[1].y)
+
+        roads = []
+        for miner_container in miner_containers:
+            path = room.findPath(miner_container, controller_container, {'ignoreCreeps': True})
+            roads.append(path[0:len(path)-1])
+            path = room.findPath(miner_container, spawn_pos, {'ignoreCreeps': True})
+            roads.append(path[0:len(path)-1])
+
+        #print('road', roads[0][1])
+        #room.visual.poly(roads[0][1], {'color': 'ff0000'})
+        #print(roads[0][1][0], roads[0][1][len(roads[0][1]-1)])
+        #room.getPositionAt(roads[0][1][0].x, roads[0][1][0].y)
+        roads.sort(key=lambda road: -1*len(road))
+        #for road in roads:
+        #    room.visual.poly([(point.x, point.y) for point in road], {'stroke': '#00ff00'})
+
+        #for s in room.find(FIND_STRUCTURES):
+        #    if s.structureType == STRUCTURE_ROAD:
+        #        s.destroy()
+
+        built_something = False
+        for road in roads:
+            for point in road:
+                has_road = False
+                for s in room.lookForAt(LOOK_STRUCTURES, point.x, point.y):
+                    if s.structureType == STRUCTURE_ROAD and s.hits >= 1:
+                        has_road = True
+                        break
+                if not has_road or not self.enable_building:
+                    built_something = True
+            if built_something:
+                self.build_roads(road)
+                if self.enable_building:
+                    break  # build roads incrementally
+
+
+
 
 #            break
 #            candidate_spots = []
