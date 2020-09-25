@@ -23,6 +23,10 @@ class ScheduledAction:
         return ActionExecution(creep, 'upgradeController', target, priority=priority)
 
     @classmethod
+    def claimController(cls, creep, target, priority=100):
+        return ActionExecution(creep, 'claimController', target, priority=priority)
+
+    @classmethod
     def build(cls, creep, target, priority=100):
         return ActionExecution(creep, 'build', target, priority=priority)
 

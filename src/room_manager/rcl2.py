@@ -16,11 +16,20 @@ class RoomManagerRCL2(AbstractRoomManager):
 
             to_construct = sum([s.progressTotal - s.progress for s in room.find(FIND_CONSTRUCTION_SITES)])
             builders = self.creep_registry.count_of_type(room, 'builder')
-            if to_construct > 3000 and builders < 2 or builders < 1:
+            miners = self.creep_registry.count_of_type(room, 'miner')
+            if to_construct > 12000 and builders < 5 and miners >= 1 or \
+               to_construct > 9000 and builders < 4 and miners >= 1 or \
+               to_construct > 6000 and builders < 3 and miners >= 1 or \
+               to_construct > 3000 and builders < 2 or \
+               builders < 1:
                 # builders first to make containers for mining
                 if room.energyAvailable >= 550:
-                    spawn.createCreep([WORK, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE], "", {'cls': 'builder'})
-            elif self.creep_registry.count_of_type(room, 'miner') < 2: #TODO len(room.sources):  # 2
+                    if to_construct > 6000:
+                        parts = [WORK, WORK, WORK, CARRY, MOVE, MOVE, MOVE, MOVE]
+                    else:
+                        parts = [WORK, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE]
+                    spawn.createCreep(parts, "", {'cls': 'builder'})
+            elif miners < 2:  #TODO len(room.sources):  # 2
                 if room.energyAvailable >= 550:
                     spawn.createCreep([WORK, WORK, WORK, WORK, WORK, MOVE], "", {'cls': 'miner'})
             #elif self.creep_registry.count_of_type(room, 'hauler') < 2: #TODO len(room.sources):  # TODO: ? 2
@@ -32,10 +41,9 @@ class RoomManagerRCL2(AbstractRoomManager):
                     parts = [CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE]
                     spawn.createCreep(parts, "", {'cls': 'hauler'})
                     return
-            elif self.creep_registry.count_of_type(room, 'upgrader') < 6:  # TODO: 3?
+            elif to_construct < 300 and self.creep_registry.count_of_type(room, 'upgrader') < 5:
                 if room.energyAvailable >= 550:
                     spawn.createCreep([WORK, WORK, WORK, WORK, CARRY, MOVE, MOVE], "", {'cls': 'upgrader'})
-            # total of 7, so 0.2*7 = 1.4 CPU/tick - decisions
 
     def spawn_creeps_in_transition_period(self):
         room = self.room

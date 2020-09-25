@@ -3,7 +3,7 @@ from creeps.parts.work import Work
 from creeps.scheduled_action import ScheduledAction
 
 
-class AbstractCreep(Carry, Work):
+class AbstractCreep:
     DEBUG = False
     ICON = '?'
     def __init__(self, creep, name, creep_registry):
@@ -25,6 +25,8 @@ class AbstractCreep(Carry, Work):
         target = Game.flags[self.name]
         if target:
             return [ScheduledAction.moveTo(self.creep, target)]
+        if self.creep.memory.room != self.creep.room.name:
+            print(self.creep, 'is in', self.creep.room, 'but should be in', self.creep.memory.room)
 
     def run(self):
         override_actions = self.pre_run()
@@ -38,21 +40,5 @@ class AbstractCreep(Carry, Work):
     def class_exists(self, klass):
         return self.creep_registry.count_of_type(self.creep.room, klass) >= 1
 
-    def _get_source_getters(self):
-        result = []
-        if not self.class_exists('hauler'):
-            result.append(self._get_dropped_resource)
-        result.append(self._get_closest_energetic_container)
-        result.append(self._get_random_energetic_ruin)
-        result.append(self._get_neighboring_source)
-        result.append(self._get_random_source)
-        return result
-
-    def _get_target_getters(self):
-        result = [self._get_rcl1_controller]
-        if not self.class_exists('hauler'):
-            result.append(self._get_random_nonempty_util_building)
-        #if not self.class_exists('builder') or self.creep.memory.cls == 'builder':  # TODO
-        result.append(self._get_closest_construction_site)
-        result.append(self._get_room_controller)
-        return result
+    def total_creeps_in_room(self):
+        return self.creep_registry.count(self.creep.room)

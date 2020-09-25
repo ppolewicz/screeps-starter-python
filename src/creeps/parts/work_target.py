@@ -10,6 +10,16 @@ __pragma__('noalias', 'type')
 __pragma__('noalias', 'update')
 
 
+non_empty_util_building_filter = lambda s: (
+    (
+        s.structureType == STRUCTURE_SPAWN or
+        s.structureType == STRUCTURE_EXTENSION or
+        s.structureType == STRUCTURE_TOWER  # somehow ;)
+    )
+    and s.energy < s.energyCapacity
+)
+
+
 class WorkTarget:
     @classmethod
     def _get_closest_construction_site(cls, creep):
@@ -23,15 +33,11 @@ class WorkTarget:
 
     @classmethod
     def _get_random_nonempty_util_building(cls, creep):
-        target_filter = lambda s: (
-            (
-                s.structureType == STRUCTURE_SPAWN or
-                s.structureType == STRUCTURE_EXTENSION or
-                s.structureType == STRUCTURE_TOWER  # somehow ;)
-            )
-            and s.energy < s.energyCapacity
-        )
-        return _(creep.room.find(FIND_MY_STRUCTURES)).filter(target_filter).sample()  # TODO: reserve it so that everyone doesn't run to the same thing
+        return _(creep.room.find(FIND_MY_STRUCTURES)).filter(non_empty_util_building_filter).sample()  # TODO: reserve it so that everyone doesn't run to the same thing
+
+    @classmethod
+    def _get_closest_nonempty_util_building(cls, creep):
+        return creep.pos.findClosestByPath(FIND_MY_STRUCTURES, {'filter': non_empty_util_building_filter})
 
     @classmethod
     def _get_room_controller(cls, creep):
@@ -51,21 +57,14 @@ class WorkTarget:
             #print('len', len(nearby_sources))
             if len(nearby_sources) >= 1:
                 continue  # that's for a miner
+            if s.store.getFreeCapacity(RESOURCE_ENERGY) == 0:
+                continue  # it's full
             containers.append(s)
-        return containers[0]  # TODO: get a "random" one ha ha, maybe Creep.id + Game.time
+        if len(containers) >= 1:
+            return containers[0]  # TODO: get a "random" one ha ha, maybe Creep.id + Game.time
 
-
-    def _get_new_target(self):
-        for target_getter in self._get_target_getters(self.creep):
-            target = target_getter(self.creep)
-            if target:
-                return target
-        print('FATAL: no targets for', self.creep, '(', self.creep.memory.cls, ') and no default')
-
-    def get_new_target(self):
-        target = self._get_new_target()
-        if target:
-            print('new target for', self.creep, 'is', target)
-            self.creep.memory.target = target.id
-            return target
-
+    @classmethod
+    def _get_storage(cls, creep):
+        storage = creep.room.storage
+        if storage != undefined:
+            return storage

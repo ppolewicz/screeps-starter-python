@@ -25,7 +25,12 @@ class AbstractRoomManager:
                 if self.room.energyAvailable >= 250:  # wait until source is full (there are no extensions)
                     spawn = get_first_spawn(self.room)
                     spawn.createCreep([WORK, CARRY, MOVE, MOVE], "", {'cls': 'harvester'})
-        room_id = int(self.room.controller.id)
+
+        if self.name != 'sim':
+            room_id = int(self.room.controller.id)
+        else:
+            room_id = 0  # int(id) doesn't work in sim?
+
         if Game.time % self.SPAWN_SCHEDULE == (room_id+1) % self.SPAWN_SCHEDULE:
             self.spawn_creeps()
         if Game.time % self.BUILD_SCHEDULE == room_id % self.BUILD_SCHEDULE or not self.enable_building:

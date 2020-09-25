@@ -26,6 +26,8 @@ class ActionExecution:
             result = self.harvest()
         elif self.method == 'moveTo':
             result = self.moveTo()
+        elif self.method == 'claimController':
+            result = self.claimController()
         elif self.method == 'upgradeController':
             result = self.upgradeController()
         elif self.method == 'transfer':
@@ -52,6 +54,8 @@ class ActionExecution:
             return OK  # TODO: some other feeback here
         where = self.args[0]
         return self.creep.moveTo(where, {'visualizePathStyle': {}})
+    def claimController(self):
+        return self.creep.claimController(self.args[0])
     def upgradeController(self):
         return self.creep.upgradeController(self.args[0])
     def transfer(self):

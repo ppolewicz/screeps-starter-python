@@ -24,10 +24,6 @@ class Miner(AbstractCreep):
                     return [ScheduledAction.harvest(creep, source)]
 
         for source in sources:
-            # we are on a container, woot
-            #if Game.time % 100 < 99:
-            #    if creep.pos.isNearTo(source):
-            #        return [ScheduledAction.harvest(creep, source)]
             path = creep.room.findPath(source.pos, creep.room.controller.pos, {'ignoreCreeps': True})
             where = path[0]
             if creep.pos.isEqualTo(where.x, where.y):
@@ -40,11 +36,6 @@ class Miner(AbstractCreep):
                 # some other creep is currently there
                 if who[0].memory.cls == 'miner':  # and it's a miner!
                     continue  # lets try another source
-            thing = get_thing_at_coordinates(containers, where.x, where.y)
-            if not thing:
-                # oops, no container
-                # TODO: build it from here rather than waiting 100 ticks for a room to build, or maybe trigger the room planner?
-                return [ScheduledAction.moveTo(creep, room.getPositionAt(where.x, where.y))]  # go there anyway, we'll mine and someone will come build it
-            return [ScheduledAction.moveTo(creep, thing)]
+            return [ScheduledAction.moveTo(creep, room.getPositionAt(where.x, where.y))]
         print('WARNING', creep, 'has no source to mine')
         return []

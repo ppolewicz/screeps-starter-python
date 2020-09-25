@@ -1,5 +1,5 @@
 def get_first_spawn(room):
-    if not room.spawns:  # we are in the sim
+    if not room.spawns:  # we are in the sim?
         return Game.spawns["Spawn1"]
     for spawn_id in room.spawns:
         return room.spawns[spawn_id]

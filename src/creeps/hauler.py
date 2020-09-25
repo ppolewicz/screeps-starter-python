@@ -18,8 +18,10 @@ class Hauler(Harvester):
     @classmethod
     def _get_target_getters(cls, creep):
         return [
-            cls._get_random_nonempty_util_building,
+            cls._get_closest_nonempty_util_building,
+            #cls._get_random_nonempty_util_building,
             cls._get_random_non_miner_container,
+            cls._get_storage,
         ]
 
     def _get_source_getters(self):

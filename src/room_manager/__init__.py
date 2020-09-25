@@ -10,7 +10,7 @@ MANAGER_REGISTRY = [
     RoomManagerRCL2,  #TODO RoomManagerRCL3,
     RoomManagerRCL2,  #TODO RoomManagerRCL4,
     RoomManagerRCL2,  #TODO RoomManagerRCL5,
-    RoomManagerRCL3,
-    RoomManagerRCL3,
-    RoomManagerRCL3,
+    RoomManagerRCL2,  #TODO RoomManagerRCL6,
+    RoomManagerRCL2,  #TODO RoomManagerRCL7,
+    RoomManagerRCL2,  #TODO RoomManagerRCL8,
 ]

@@ -22,10 +22,16 @@ __pragma__('noalias', 'update')
 class CreepRegistry:
     def __init__(self):
         self.by_room = {}
+    def count(self, room):
+        if room not in self.by_room:
+            return 0
+        return len(self.by_room[room])
     def count_of_type(self, room, creep_type):
         if room not in self.by_room:
             return 0
         room_creeps = self.by_room[room]
+        #if room_creeps == undefined:
+        #    return 0
         result = 0
         for creep in room_creeps:
             if creep.memory.cls == creep_type:
@@ -46,8 +52,8 @@ def main():
     creep_registry = CreepRegistry()
     imports = Game.cpu.getUsed()
 
-    if Game.cpu.buffer > 9000:
-        Game.cpu.generate_pixel()
+    if Game.cpu.bucket > 9000:
+        Game.cpu.generatePixel()
 
     all_actions = []
     # Register each creep
@@ -89,8 +95,9 @@ def main():
         #print("before", manager_class.__name__, room)
         all_actions.extend(manager.run())
 
-    #Game.rooms['W25N1'].visual.circle(10,20).line(0,0,10,20)
-    #MANAGER_REGISTRY[2](room, room.name, creep_registry, False)
+    #Game.rooms['W27N1'].visual.circle(10,20).line(0,0,10,20)
+    #room = Game.rooms['W27N1']
+    #MANAGER_REGISTRY[2](room, room.name, creep_registry, False).run()
 
     actions_cost = execute_actions(all_actions)
     used = Game.cpu.getUsed()

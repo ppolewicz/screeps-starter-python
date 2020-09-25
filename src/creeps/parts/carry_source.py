@@ -1,3 +1,5 @@
+__pragma__('noalias', 'undefined')
+
 from creeps.scheduled_action import ScheduledAction
 
 
@@ -14,7 +16,6 @@ class CarrySource:
         #    s.resourceType == RESOURCE_ENERGY and s.amount >= 50
         #)
         source = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES) #, filter=source_filter)  # TODO: reserve it for the creep that is closest to the thing
-        print('closest dropped resource for', creep, 'is', source)
         return source
 
     @classmethod
@@ -84,6 +85,13 @@ class CarrySource:
         #    return max(abs(site.pos.x-creep.pos.x), abs(site.pos.y-creep.pos.y))
         containers.sort(key=lambda container: -1*container.store[RESOURCE_ENERGY])
         return containers[0]  # TODO: get a "random" one ha ha, maybe Creep.id + Game.time
+
+    @classmethod
+    def _get_nonempty_storage(cls, creep):
+        storage = creep.room.storage
+        if storage != undefined:
+            if storage.store[RESOURCE_ENERGY] > 50:
+                return storage
 
     def do_fill(self):
         creep = self.creep
