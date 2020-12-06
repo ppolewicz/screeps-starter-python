@@ -1,8 +1,11 @@
 def get_first_spawn(room):
-    if not room.spawns:  # we are in the sim?
-        return Game.spawns["Spawn1"]
-    for spawn_id in room.spawns:
-        return room.spawns[spawn_id]
+    for s in room.find(FIND_MY_STRUCTURES):
+        if s.structureType == STRUCTURE_SPAWN:
+            return s
+    for s in room.find(FIND_CONSTRUCTION_SITES):
+        if s.structureType == STRUCTURE_SPAWN:
+            return s
+    #print('WARNING: get_first_spawn returning None for', room)
 
 
 def search_room(room, kind, filter_function=lambda x: True):
@@ -41,3 +44,43 @@ ERRORS = {
     -14: 'ERR_RCL_NOT_ENOUGH',
     -15: 'ERR_GCL_NOT_ENOUGH',
 }
+
+AROUND_OFFSETS = (
+    (
+        (-1, -1),
+        (-1, 0),
+        (-1, 1),
+        (0, 1),
+        (0, -1),
+        (1, -1),
+        (1, 0),
+        (1, 1),
+    ),
+    (
+        (1, -2),
+        (0, -2),
+        (-1, -2),
+        (-2, -2),
+        (-2, -1),
+        (-2, 0),
+        (-2, 1),
+        (-2, 2),
+        (-1, 2),
+        (0, 2),
+        (1, 2),
+        (2, -2),
+        (2, -1),
+        (2, 0),
+        (2, 1),
+        (2, 2),
+    ),
+)
+
+
+def around_range(room, x, y, distance, vis=None):
+    result = []
+    for x_diff, y_diff in AROUND_OFFSETS[distance-1]:
+        result.append((x + x_diff, y + y_diff))
+        if vis is not None:
+            room.visual.circle(x+x_diff, y+y_diff, {'stroke': vis})
+    return result

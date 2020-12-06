@@ -1,49 +1,136 @@
+__pragma__('noalias', 'get')
+__pragma__('noalias', 'set')
+__pragma__('noalias', 'name')
+__pragma__('noalias', 'undefined')
+
 from utils import get_first_spawn
 from utils import search_room
 from utils import P
+from utils import around_range
 
 from room_manager.abstract import AbstractRoomManager
+from room_manager.links import Links
+from room_manager.abstract import g_links
 from room_manager.rcl1 import RoomManagerRCL1
+
+
+room_sizes = {}  # TODO: global memory
 
 
 class RoomManagerRCL2(AbstractRoomManager):
     def spawn_creeps(self):
         room = self.room
         spawn = get_first_spawn(room)
+        if spawn is None:
+            return  # no spawn yet
         if not spawn.spawning:
             if room.energyCapacityAvailable < 550:  # extensions were not built yet
                 return self.spawn_creeps_in_transition_period()
 
-            to_construct = sum([s.progressTotal - s.progress for s in room.find(FIND_CONSTRUCTION_SITES)])
+            to_construct = [s.progressTotal - s.progress for s in room.find(FIND_CONSTRUCTION_SITES)]
+            to_construct_sum = sum(to_construct)
             builders = self.creep_registry.count_of_type(room, 'builder')
             miners = self.creep_registry.count_of_type(room, 'miner')
-            if to_construct > 12000 and builders < 5 and miners >= 1 or \
-               to_construct > 9000 and builders < 4 and miners >= 1 or \
-               to_construct > 6000 and builders < 3 and miners >= 1 or \
-               to_construct > 3000 and builders < 2 or \
-               builders < 1:
+            haulers = self.creep_registry.count_of_type(room, 'hauler')
+            dropped_sum = sum([r.amount for r in room.find(FIND_DROPPED_RESOURCES)])
+            size = room_sizes[room]
+            if size == undefined:  # TODO: fill it aggresively, don't wait
+                size = 25
+            #print('room size', room, size)
+            desired_haulers = int(size / 10)  # TODO: can use less larger ones
+            if room.controller.level >= 5:
+                desired_haulers = 3  # TODO: when miners will man the links, we can reduce that to 1
+            if to_construct_sum > 12000 and builders < 5 and miners >= 1 or \
+               to_construct_sum > 9000 and builders < 4 and miners >= 1 or \
+               to_construct_sum > 6000 and builders < 3 and miners >= 1 or \
+               to_construct_sum > 3000 and builders < 2 or \
+               to_construct_sum > 0 and builders < 1:
                 # builders first to make containers for mining
+                to_construct_max = max(to_construct)
+                to_construct_avg = sum(to_construct) / len(to_construct)
                 if room.energyAvailable >= 550:
-                    if to_construct > 6000:
+                    if to_construct_max >= 5001:
                         parts = [WORK, WORK, WORK, CARRY, MOVE, MOVE, MOVE, MOVE]
-                    else:
+                    elif to_construct_avg >= 5001:
                         parts = [WORK, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE]
+                    else:
+                        parts = [WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE]
                     spawn.createCreep(parts, "", {'cls': 'builder'})
-            elif miners < 2:  #TODO len(room.sources):  # 2
-                if room.energyAvailable >= 550:
-                    spawn.createCreep([WORK, WORK, WORK, WORK, WORK, MOVE], "", {'cls': 'miner'})
+            elif miners < 2:  #TODO number of sources
+                if room.controller.level <= 4 or True:  # TODO
+                    if room.energyAvailable >= 2200:
+                        spawn.createCreep([WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, MOVE, MOVE, MOVE, MOVE], "", {'cls': 'miner'})
+                    elif room.energyAvailable >= 1650:
+                        spawn.createCreep([WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, MOVE, MOVE, MOVE], "", {'cls': 'miner'})
+                    elif room.energyAvailable >= 1100:
+                        spawn.createCreep([WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, MOVE, MOVE], "", {'cls': 'miner'})
+                    elif room.energyAvailable >= 550:
+                        spawn.createCreep([WORK, WORK, WORK, WORK, WORK, MOVE], "", {'cls': 'miner'})
+                else:  # link miners
+                    if room.energyAvailable >= 3900:  # this one is optimized for CPU, really
+                        spawn.createCreep([
+                            WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK,
+                            WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK,
+                            WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK,
+                            CARRY, CARRY, CARRY, CARRY, CARRY, CARRY,
+                            CARRY, CARRY, CARRY, CARRY, CARRY, CARRY,
+                            MOVE, MOVE, MOVE, MOVE, MOVE, MOVE,  # TODO: they should spawn on the position and never move
+                        ], "", {'cls': 'miner'})
+                    elif room.energyAvailable >= 3600:
+                        spawn.createCreep([  # TODO: those should be calculated by math from energyAvailable, not templated
+                            WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK,
+                            WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK,
+                            WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK,
+                            CARRY, CARRY, CARRY, CARRY, CARRY, CARRY,
+                            MOVE, MOVE, MOVE, MOVE, MOVE, MOVE,
+                        ], "", {'cls': 'miner'})
+                    elif room.energyAvailable >= 2400:
+                        spawn.createCreep([
+                            WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK,
+                            WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK,
+                            CARRY, CARRY, CARRY, CARRY,
+                            MOVE, MOVE, MOVE, MOVE,
+                        ], "", {'cls': 'miner'})
+                    elif room.energyAvailable >= 1800:
+                        spawn.createCreep([WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE], "", {'cls': 'miner'})
+                    elif room.energyAvailable >= 1200:
+                        spawn.createCreep([WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE], "", {'cls': 'miner'})
+                    elif room.energyAvailable >= 600:
+                        spawn.createCreep([WORK, WORK, WORK, WORK, WORK, CARRY, MOVE], "", {'cls': 'miner'})
+                    elif room.energyAvailable >= 550:
+                        spawn.createCreep([WORK, WORK, WORK, WORK, WORK, MOVE], "", {'cls': 'miner'})
             #elif self.creep_registry.count_of_type(room, 'hauler') < 2: #TODO len(room.sources):  # TODO: ? 2
             #    if room.energyAvailable >= 550:
             #        spawn.createCreep([WORK, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE], "", {'cls': 'hauler'})
-            elif self.creep_registry.count_of_type(room, 'hauler') < 2:
+            #elif dropped_sum > 5000 and haulers < 5 or \
+            #     dropped_sum > 1000 and haulers < 4 or \
+            #     dropped_sum > 50 and haulers < 3 or \
+            #     haulers < 2:
+            elif haulers < desired_haulers:
                 if room.energyAvailable >= 550:
                     # TODO: scale it to the room size
-                    parts = [CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE]
+                    #parts = [CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE]
+                    parts = [WORK, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE]
                     spawn.createCreep(parts, "", {'cls': 'hauler'})
                     return
-            elif to_construct < 300 and self.creep_registry.count_of_type(room, 'upgrader') < 5:
+            elif room.controller.level < 8 and to_construct < 300 and self.creep_registry.count_of_type(room, 'upgrader') < 4:  # TODO: 5 before storage exists
                 if room.energyAvailable >= 550:
                     spawn.createCreep([WORK, WORK, WORK, WORK, CARRY, MOVE, MOVE], "", {'cls': 'upgrader'})
+            elif room.controller.level == 8:
+                if self.creep_registry.count_of_type(room, 'upgrader') < 1:
+                    if room.energyAvailable >= 100*15 +50*3 +50*5:
+                        spawn.createCreep(
+                            [
+                                WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK,
+                                CARRY, CARRY, CARRY,
+                                MOVE, MOVE, MOVE, MOVE, MOVE,
+                            ],
+                            "",
+                            {'cls': 'upgrader'},
+                        )
+                        return
+                    elif room.energyAvailable >= 550:
+                        spawn.createCreep([WORK, WORK, WORK, WORK, CARRY, MOVE, MOVE], "", {'cls': 'upgrader'})
 
     def spawn_creeps_in_transition_period(self):
         room = self.room
@@ -64,19 +151,46 @@ class RoomManagerRCL2(AbstractRoomManager):
             return RoomManagerRCL1(room, self.creep_registry).spawn_creeps()  # keep RCL1 layout until they build up the extensions
 
     AROUND_OFFSETS = (
-        (-1, -1),
-        (-1, 0),
-        (-1, 1),
-        (0, -1),
-        (0, 1),
-        (1, -1),
-        (1, 0),
-        (1, 1),
+        (
+            (-1, -1),
+            (-1, 0),
+            (-1, 1),
+            (0, 1),
+            (0, -1),
+            (1, -1),
+            (1, 0),
+            (1, 1),
+        ),
+        (
+            (1, -2),
+            (0, -2),
+            (-1, -2),
+            (-2, -2),
+            (-2, -1),
+            (-2, 0),
+            (-2, 1),
+            (-2, 2),
+            (-1, 2),
+            (0, 2),
+            (1, 2),
+            (2, -2),
+            (2, -1),
+            (2, 0),
+            (2, 1),
+            (2, 2),
+        ),
     )
     def run_build(self):
         # TODO: don't do it every tick
         room = self.room
-        spawn_pos = get_first_spawn(room).pos
+        spawn = get_first_spawn(room)
+        if spawn is None:
+            #return  # no spawn yet and no construction site.
+            return
+            #spawn_pos = room.getPositionAt(8, 21)
+        else:
+            spawn_pos = spawn.pos
+
         # shaped farms first
         if room.energyCapacityAvailable < 550:  # all extensions were not built yet
             #eree
@@ -102,25 +216,93 @@ class RoomManagerRCL2(AbstractRoomManager):
 
         sources = search_room(room, FIND_SOURCES)
 
+        map_size = 0
         miner_containers = []
         for source in sources:
             path = room.findPath(source.pos, room.controller.pos, {'ignoreCreeps': True})
+            map_size += len(path)
             miner_containers.append(
                 self.build_container(path[0].x, path[0].y)
             )
+        room_sizes[room] = map_size
 
+        def costCallback(roomName, costMatrix):
+            terrain = Game.rooms[roomName].getTerrain()
+            around_coords = around_range(room, room.controller.pos.x, room.controller.pos.y, 1)
+            around_coords.extend(
+                around_range(room, room.controller.pos.x, room.controller.pos.y, 2)
+            )
+            walls = []
+            for x, y in around_coords:
+                if terrain.get(x, y) == 1:
+                    walls.append((x, y))
+            for wx, wy in walls:
+                for x, y in around_range(room, wx, wy, 1):
+                    costMatrix.set(x, y, 20)
+
+            #    value = 70
+            #        value = 255
+            #    costMatrix.set(x, y, value)
+            #for x, y in around_range(room, room.controller.pos.x, room.controller.pos.y, 2):
+            #    value = 40
+            #    if terrain.get(x, y) == 1:
+            #        value = 255
+            #    costMatrix.set(x, y, value)
+            #costMatrix.set(18, 8, 50)
+
+        #PathFinder.use(True)
         # build a container next to controller
-        path = room.findPath(room.controller.pos, spawn_pos, {'ignoreCreeps': True})
+        path = room.findPath(
+            room.controller.pos,
+            spawn_pos,
+            {
+                'ignoreCreeps': True,
+                'costCallback': costCallback,
+                'maxRooms': 1,
+            },
+        )
         controller_container = room.getPositionAt(path[1].x, path[1].y)
 
         self.build_container(path[1].x, path[1].y)
 
         roads = []
+        #if 1:
+        #    roads.append(path)
+        #    #return
+
+        ignoreRoads = True
         for miner_container in miner_containers:
-            path = room.findPath(miner_container, controller_container, {'ignoreCreeps': True})
+            path = room.findPath(miner_container, controller_container, {'ignoreCreeps': True, 'ignoreRoads': ignoreRoads})
             roads.append(path[0:len(path)-1])
             path = room.findPath(miner_container, spawn_pos, {'ignoreCreeps': True})
             roads.append(path[0:len(path)-1])
+
+        links = Links()
+        link_filter = lambda s: (
+            s.structureType == STRUCTURE_LINK
+        )
+        for what, obj in [
+                ('controller', room.controller),
+                ('storage', room.storage),
+                ('terminal', room.terminal),
+                # TODO: mineral link
+            ]:
+            if obj == undefined:
+                #print(what, 'does not exist in', room.name)
+                continue
+            structures = obj.pos.findInRange(FIND_STRUCTURES, 3, filter=link_filter)  # TODO: if faith source is close to energy source, this will mess up
+            if len(structures) >= 1:
+                setattr(links, what + '_id', structures[0].id)
+            #else:
+            #    print('no link for', what, 'in', room)
+
+        for miner_container in miner_containers:
+            miner_links = miner_container.findInRange(FIND_STRUCTURES, 1, filter=link_filter)
+            if len(miner_links):
+                links.source_ids.append(miner_links[0].id)
+
+        #print('setting links', links, 'in', room)
+        g_links[room.name] = links
 
         #print('road', roads[0][1])
         #room.visual.poly(roads[0][1], {'color': 'ff0000'})

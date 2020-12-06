@@ -12,21 +12,28 @@ class CarrySource:
     @classmethod
     def _get_dropped_resource(cls, creep):
         # when a creep dies and leaves some energy, go pick it up
-        #source_filter = lambda s: (
-        #    s.resourceType == RESOURCE_ENERGY and s.amount >= 50
-        #)
-        source = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES) #, filter=source_filter)  # TODO: reserve it for the creep that is closest to the thing
+        source_filter = lambda s: (
+            s.resourceType == RESOURCE_ENERGY and s.amount >= 50
+        )
+        source = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES, filter=source_filter)  # TODO: reserve it for the creep that is closest to the thing
         return source
 
     @classmethod
     def _get_closest_energetic_container(cls, creep):
         #free_capacity = creep.store.getFreeCapacity(RESOURCE_ENERGY)
         source_filter = lambda s: (
-            s.structureType == STRUCTURE_CONTAINER and s.store[RESOURCE_ENERGY] >= 50
+            (s.structureType == STRUCTURE_CONTAINER or s.structureType == STRUCTURE_STORAGE or s.structureType == STRUCTURE_TERMINAL)
+            and s.store[RESOURCE_ENERGY] >= 50
         )
         result = creep.pos.findClosestByRange(FIND_STRUCTURES, filter=source_filter)
         #print('closest energetic container for', creep, 'is', result)
         return result
+
+    @classmethod
+    def _get_nearby_dropped_resource(cls, creep):
+        sources = creep.pos.findInRange(FIND_DROPPED_RESOURCES, 3)
+        if len(sources) >= 1:
+            return sources[0]
 
     @classmethod
     def _get_random_energetic_ruin(cls, creep):
@@ -45,6 +52,24 @@ class CarrySource:
                 self.creep.memory.source = source.id
                 return source
         print(self.creep, 'no source!')
+
+    @classmethod
+    def _get_neighboring_nonempty_link(cls, creep):
+        source_filter = lambda s: (
+            s.structureType == STRUCTURE_LINK and s.store[RESOURCE_ENERGY] >= 50
+        )
+        container = creep.pos.findInRange(FIND_STRUCTURES, 1, filter=source_filter)
+        if len(container) >= 1:
+            return container[0]
+
+    @classmethod
+    def _get_neighboring_nonfull_link(cls, creep):
+        source_filter = lambda s: (
+            s.structureType == STRUCTURE_LINK and s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+        )
+        container = creep.pos.findInRange(FIND_STRUCTURES, 3, filter=source_filter)  # TODO
+        if len(container) >= 1:
+            return container[0]
 
     @classmethod
     def _get_neighboring_miner_container(cls, creep):
@@ -87,6 +112,15 @@ class CarrySource:
         return containers[0]  # TODO: get a "random" one ha ha, maybe Creep.id + Game.time
 
     @classmethod
+    def _get_source_of_faith(cls, creep):
+        containers = []
+        for s in creep.room.controller.pos.findInRange(FIND_STRUCTURES, 3):
+            if s.structureType != STRUCTURE_CONTAINER and s.structureType != STRUCTURE_LINK:
+                continue
+            if s.store[RESOURCE_ENERGY] > 0:
+                return s
+
+    @classmethod
     def _get_nonempty_storage(cls, creep):
         storage = creep.room.storage
         if storage != undefined:
@@ -98,6 +132,8 @@ class CarrySource:
         source = self.get_source(creep)
 
         def reset_source():
+            if creep.store.getFreeCapacity(RESOURCE_ENERGY) < creep.store.getCapacity(RESOURCE_ENERGY) * 0.6:
+                creep.memory.filling = False  # XXX HACKS
             del creep.memory.source
 
         if not creep.pos.isNearTo(source):
@@ -106,9 +142,19 @@ class CarrySource:
         if source.amount != None:  # dropped resource
             return [ScheduledAction.pickup(creep, source, reset_source)]
         elif source.destroyTime != None:  # ruin
-            reset_source()  # we'll drain it to our capacity all in one tick, lets not try taking it again next tick
-            return [ScheduledAction.withdraw(creep, source, RESOURCE_ENERGY)]  # TODO: reset_source doesn't work
+            del creep.memory.source  # we'll drain it to our capacity all in one tick, lets not try taking it again next tick
+            return [ScheduledAction.withdraw(creep, source, RESOURCE_ENERGY)]
         elif source.store != None:  # container/storage
+            if creep.store.getFreeCapacity(RESOURCE_ENERGY) >= source.store[RESOURCE_ENERGY]:
+                who = creep.room.lookForAt(LOOK_CREEPS, source.pos)
+                if len(who) >= 1:
+                    # some creep is currently there
+                    if who[0].memory.cls == 'miner':  # and it's a miner!
+                        # save CPU: don't just stand there and siphon it as it is being filled
+                        if Game.time % 10 != 0:  # TODO: save even more cpu
+                            # but if the room is drained completely, don't wait for the entire pilgrimage
+                            # try to unstuck
+                            return []
             return [ScheduledAction.withdraw(creep, source, RESOURCE_ENERGY)]  # TODO: reset_source doesn't work
         else:  # a source
             return [ScheduledAction.harvest(creep, source)]

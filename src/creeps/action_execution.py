@@ -32,6 +32,10 @@ class ActionExecution:
             result = self.upgradeController()
         elif self.method == 'transfer':
             result = self.transfer()
+        elif self.method == 'drop':
+            result = self.drop()
+        elif self.method == 'repair':
+            result = self.repair()
         elif self.method == 'withdraw':
             result = self.withdraw()
         elif self.method == 'pickup':
@@ -51,15 +55,19 @@ class ActionExecution:
         return self.creep.harvest(self.args[0])
     def moveTo(self):
         if self.creep.fatigue > 0:
-            return OK  # TODO: some other feeback here
+            return OK
         where = self.args[0]
         return self.creep.moveTo(where, {'visualizePathStyle': {}})
     def claimController(self):
         return self.creep.claimController(self.args[0])
     def upgradeController(self):
         return self.creep.upgradeController(self.args[0])
+    def repair(self):
+        return self.creep.repair(self.args[0])
     def transfer(self):
         return self.creep.transfer(self.args[0], self.args[1])
+    def drop(self):
+        return self.creep.drop(self.args[0])
     def withdraw(self):
         #print('withdraw', self.creep, self.args[0], self.args[1])
         return self.creep.withdraw(self.args[0], self.args[1])

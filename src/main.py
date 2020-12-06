@@ -1,5 +1,5 @@
-from creeps import CREEP_CLASSES
 from room_manager import MANAGER_REGISTRY
+from creeps import CREEP_CLASSES
 
 # defs is a package which claims to export all constants and some JavaScript objects, but in reality does
 #  nothing. This is useful mainly when using an editor like PyCharm, so that it 'knows' that things like Object, Creep,
@@ -70,7 +70,10 @@ def main():
         creeps_to_do.append(creep)
 
     # Run each creep
+    hostiles = {}
     for creep in creeps_to_do:
+        if not creep.my:
+            continue  # wtf
         creep_class = CREEP_CLASSES[creep.memory.cls]
         if not creep_class:
             #print('ERROR, NO CREEP CLASS FOR', creep.memory.cls)
@@ -79,21 +82,31 @@ def main():
         actions = creep_class(creep, creep.name, creep_registry).run()
         #print('actions for', creep, 'are', actions)
         all_actions.append(actions)
+
     #print('creeps done')
     # Get the number of our creeps in the room.
     #num_creeps = _.sum(Game.creeps, lambda c: c.pos.roomName == spawn.pos.roomName)
 
-    my_rooms = set()  # TODO: cache my rooms in memory like a pro
-    for name in Object.keys(Game.spawns):
-        spawn = Game.spawns[name]
-        my_rooms.add(spawn.room)
-    #print('after rooms done, room count:', len(my_rooms))
+    my_rooms = set()  # TODO: cache my rooms in RAM like a pro
+    for name in Object.keys(Game.rooms):
+        my_rooms.add(Game.rooms[name])
 
     for room in my_rooms:
+        #print('ROOM', room)
+        if not room.controller or not room.controller.my:
+            continue
         manager_class = MANAGER_REGISTRY[room.controller.level]
-        manager = manager_class(room, room.name, creep_registry, True)
+        manager = manager_class(room, creep_registry, True)
         #print("before", manager_class.__name__, room)
         all_actions.extend(manager.run())
+
+        for creep in room.find(FIND_HOSTILE_CREEPS):
+            print('hostile creep!', creep)
+            for s in room.find(FIND_MY_STRUCTURES):
+                if s.structureType != STRUCTURE_TOWER:
+                    continue
+                s.attack(creep)  # TODO: action
+            break
 
     #Game.rooms['W27N1'].visual.circle(10,20).line(0,0,10,20)
     #room = Game.rooms['W27N1']

@@ -31,12 +31,20 @@ class ScheduledAction:
         return ActionExecution(creep, 'build', target, priority=priority)
 
     @classmethod
+    def repair(cls, creep, target, priority=100):
+        return ActionExecution(creep, 'repair', target, priority=priority)
+
+    @classmethod
     def harvest(cls, creep, target, priority=100):
         return ActionExecution(creep, 'harvest', target, priority=priority)
 
     @classmethod
     def transfer(cls, creep, target, what, on_error=None, priority=100):
         return ActionExecution(creep, 'transfer', target, what, on_error, priority=priority)
+
+    @classmethod
+    def drop(cls, creep, what, on_error=None, priority=100):
+        return ActionExecution(creep, 'drop', what, on_error, priority=priority)
 
     @classmethod
     def pickup(cls, creep, target, on_error=None, priority=100):

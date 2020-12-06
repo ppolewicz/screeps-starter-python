@@ -18,6 +18,8 @@ class Harvester(EasyCreep):
         result = []
         if not self.class_exists('hauler'):
             result.append(self._get_dropped_resource)
+        else:
+            result.append(self._get_nearby_dropped_resource)
         result.append(self._get_closest_energetic_container)
         result.append(self._get_random_energetic_ruin)
         result.append(self._get_neighboring_source)
@@ -26,14 +28,21 @@ class Harvester(EasyCreep):
         return result
 
     def _get_target_getters(self):
-        result = [self._get_rcl1_controller]
+        result = [
+            self._get_rcl1_controller,
+            self._get_room_controller_if_low,
+            self._get_spawn_construction_site,
+        ]
         if not self.class_exists('hauler'):
             #if self.total_creeps_in_room() == 1:
             result.append(self._get_closest_nonempty_util_building)
             #else:
             #    result.append(self._get_random_nonempty_util_building)
-        #if not self.class_exists('builder') or self.creep.memory.cls == 'builder':  # TODO
-        result.append(self._get_closest_construction_site)
-        result.append(self._get_room_controller)
+        # TODO XXX: critical repairs
+        if not self.class_exists('builder') or self.creep.memory.cls == 'builder':
+            result.append(self._get_closest_construction_site)
+        result.append(self._get_best_free_church)
+        if self.creep.room.controller.level != 8 or not self.class_exists('upgrader'):
+            result.append(self._get_room_controller)
         return result
 

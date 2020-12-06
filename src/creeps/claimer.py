@@ -3,6 +3,7 @@ from creeps.abstract import AbstractCreep
 
 
 class Claimer(AbstractCreep):
+    DEBUG = True
     ICON = '⛪'
     def _run(self):
         super()._run()
