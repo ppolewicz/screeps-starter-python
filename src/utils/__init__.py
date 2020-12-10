@@ -1,3 +1,10 @@
+def part_count(creep, of_type):
+    count = 0
+    for part in creep.body:
+        if part['type'] == of_type:
+            count += 1
+    return count
+
 def get_first_spawn(room):
     for s in room.find(FIND_MY_STRUCTURES):
         if s.structureType == STRUCTURE_SPAWN:
@@ -7,6 +14,12 @@ def get_first_spawn(room):
             return s
     #print('WARNING: get_first_spawn returning None for', room)
 
+def get_controller_spawn(room):
+    # TODO: cache it and drop cache after a spawn is completed
+    source_filter = lambda s: (
+        s.structureType == STRUCTURE_SPAWN
+    )
+    return room.controller.pos.findClosestByRange(FIND_MY_STRUCTURES, filter=source_filter)
 
 def search_room(room, kind, filter_function=lambda x: True):
     result_list = []

@@ -133,3 +133,17 @@ class WorkTarget:
         terminal = creep.room.terminal
         if terminal != undefined:
             return terminal
+
+    @classmethod
+    def _get_nonfull_storage(cls, creep):
+        storage = creep.room.storage
+        if storage != undefined:
+            if storage.store.getFreeCapacity(RESOURCE_ENERGY) > 150:
+                return storage
+
+    @classmethod
+    def _get_nonfull_terminal(cls, creep):
+        terminal = creep.room.terminal
+        if terminal != undefined:
+            if terminal.store.getFreeCapacity(RESOURCE_ENERGY) > 150:
+                return terminal

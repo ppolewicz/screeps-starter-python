@@ -2,6 +2,7 @@ from creeps.abstract import AbstractCreep
 from creeps.parts.carry import Carry
 from creeps.parts.work import Work
 from creeps.scheduled_action import ScheduledAction
+from utils import part_count
 
 __pragma__('noalias', 'undefined')
 __pragma__('noalias', 'Infinity')
@@ -9,6 +10,7 @@ __pragma__('noalias', 'keys')
 __pragma__('noalias', 'get')
 __pragma__('noalias', 'set')
 __pragma__('noalias', 'type')
+__pragma__('noalias', 'name')
 __pragma__('noalias', 'update')
 
 
@@ -17,7 +19,7 @@ class EasyCreep(AbstractCreep, Carry, Work):
     ICON = '?'
     def __init__(self, creep, name, creep_registry):
         self.creep = creep
-        self.name = name
+        #self.name = name  # proper no-alias
         self.creep_registry = creep_registry
 
     def _get_source_getters(self):
@@ -25,12 +27,6 @@ class EasyCreep(AbstractCreep, Carry, Work):
 
     def _get_target_getters(self):
         raise NotImplementedError
-
-    @classmethod
-    def _get_storage(cls, creep):  # works for both source and target
-        storage = creep.room.storage
-        if storage != undefined:
-            return storage
 
     def _get_new_target(self):
         for target_getter in self._get_target_getters(self.creep):
@@ -136,12 +132,16 @@ class EasyCreep(AbstractCreep, Carry, Work):
 
         # upgradeController
         if target.structureType == STRUCTURE_CONTROLLER:
-            action = ScheduledAction.upgradeController(creep, target)
+            actions = [ScheduledAction.upgradeController(creep, target)]
             if creep.room.controller.ticksToDowngrade < 4000:
-                action.priority = 1000
+                actions[0].priority = 1000
             else:
-                action.priority = 20
-            return [action]
+                actions[0].priority = 20
+            fill_actions = self.do_fill(creep)
+            works = part_count(creep, 'work')
+            if works * 1 >= creep.store[RESOURCE_ENERGY] and fill_actions[0].method == 'withdraw':  # TODO: multiply by upgrade cost per part per tick
+                actions.append(fill_actions[0])
+            return actions
 
         # build
         if target.progressTotal:

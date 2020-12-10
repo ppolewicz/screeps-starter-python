@@ -4,6 +4,7 @@ from creeps.scheduled_action import ScheduledAction
 from creeps.abstract import AbstractCreep
 from utils import get_thing_at_coordinates
 from utils import search_room
+from utils import part_count
 
 # TODO: if the source is empty and there is another non-reserved source in that room that can be reached before our current source resets, then switch designated source to that new one and go to it
 # TODO: if all sources are empty and we can reach spawn before sources reset + our spawning time, go to the spawn
@@ -22,10 +23,7 @@ class Miner(AbstractCreep):
         if thing:
             for source in sources:
                 if creep.pos.isNearTo(source):
-                    works = 0
-                    for part in creep.body:
-                        if part['type'] == 'work':
-                            works += 1
+                    works = part_count(creep, 'work')
                     #if source.ticksToRegeneration == undefined or source.energy / source.ticksToRegeneration > works * HARVEST_POWER:  # TODO: check for off-by-one
                     #print(creep, source.ticksToRegeneration, source.ticksToRegeneration % (works/5) == 0)
                     actions = []

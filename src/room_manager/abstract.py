@@ -10,6 +10,7 @@ class AbstractRoomManager:
     BUILD_SCHEDULE = 100  # try to build once every n ticks
     SPAWN_SCHEDULE = 10
     LINKS_SCHEDULE = 1
+    LINK_MIN_TRANSFER_AMOUNT = LINK_CAPACITY / 2
     DEBUG_VIS = dict({
         STRUCTURE_ROAD: {'stroke': '#00ff00'},
         STRUCTURE_EXTENSION: {'stroke': 'yellow'},
@@ -65,19 +66,30 @@ class AbstractRoomManager:
         return action_sets
 
     def run_links(self, our_links):
+        #start = Game.cpu.getUsed()
         controller_link = our_links.get_controller()
         if not controller_link:
             return
         #print('============================ running links in', self.room.name, our_links, our_links.get_controller())
-        if controller_link.store[RESOURCE_ENERGY] <= 50:
-            print('////////////////////////////', self.room.name, 'controller needs link filled', our_links.get_sources())
+        if controller_link.store.getFreeCapacity(RESOURCE_ENERGY) >= self.LINK_MIN_TRANSFER_AMOUNT:
+            #print('////////////////////////////', self.room.name, 'controller needs link filled', our_links.get_sources())
             for source_link in our_links.get_sources():
-                if source_link.store[RESOURCE_ENERGY] == LINK_CAPACITY:
-                    source_link.transferEnergy(controller_link, controller_link.store.getFreeCapacity(RESOURCE_ENERGY))
-                    print('++++++++++++++++++++++++++++ transfer energy from', source_link, 'to', controller_link)
-                    break
-                else:
-                    print('----------------------------', source_link, 'does not have enough to send to controller', source_link.store[RESOURCE_ENERGY])
+                if source_link.store[RESOURCE_ENERGY] < self.LINK_MIN_TRANSFER_AMOUNT:
+                    #print('----------------------------', source_link, 'does not have enough to send to controller', source_link.store[RESOURCE_ENERGY])
+                    continue
+                amount = min(
+                    controller_link.store.getFreeCapacity(RESOURCE_ENERGY),
+                    source_link.store[RESOURCE_ENERGY],
+                )
+                source_link.transferEnergy(
+                    controller_link,
+                    amount
+                )
+                #print('++++++++++++++++++++++++++++ transfer energy from', source_link, 'to', controller_link)
+                break
+        end = Game.cpu.getUsed()
+        #global cpustats
+        #cpustats['links'] = cpustats.get('links', 0) + end - start
 
     def spawn_creeps(self):
         raise NotImplementedError

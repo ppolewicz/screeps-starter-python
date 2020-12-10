@@ -127,6 +127,13 @@ class CarrySource:
             if storage.store[RESOURCE_ENERGY] > 50:
                 return storage
 
+    @classmethod
+    def _get_nonempty_terminal(cls, creep):
+        terminal = creep.room.terminal
+        if terminal != undefined:
+            if terminal.store[RESOURCE_ENERGY] > 50:
+                return terminal
+
     def do_fill(self):
         creep = self.creep
         source = self.get_source(creep)

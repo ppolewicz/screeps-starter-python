@@ -46,17 +46,17 @@ class Hauler(Harvester):
             targets.append(
                 cls._get_random_non_miner_container,
             )
-        targets.append(cls._get_terminal)
-        targets.append(cls._get_storage)
+        targets.append(cls._get_nonfull_terminal)
+        targets.append(cls._get_nonfull_storage)
         return targets
 
     def _get_source_getters(self):
+        sources = []
         if self.room_really_needs_refill():
-            print(self.creep.room, 'really needs refill')
-            return [self._get_storage, self._get_terminal]
-        return [
-            self._get_neighboring_miner_container,
-            self._get_dropped_resource,
-            self._get_random_energetic_ruin,
-            self._get_fullest_miner_container,
-        ]
+            sources.append(self._get_nonempty_storage)
+            sources.append(self._get_nonempty_terminal)
+        sources.append(self._get_neighboring_miner_container)
+        sources.append(self._get_dropped_resource)
+        sources.append(self._get_random_energetic_ruin)
+        sources.append(self._get_fullest_miner_container)
+        return sources

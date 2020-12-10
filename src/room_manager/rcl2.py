@@ -4,6 +4,7 @@ __pragma__('noalias', 'name')
 __pragma__('noalias', 'undefined')
 
 from utils import get_first_spawn
+from utils import get_controller_spawn
 from utils import search_room
 from utils import P
 from utils import around_range
@@ -113,24 +114,60 @@ class RoomManagerRCL2(AbstractRoomManager):
                     parts = [WORK, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE]
                     spawn.createCreep(parts, "", {'cls': 'hauler'})
                     return
-            elif room.controller.level < 8 and to_construct < 300 and self.creep_registry.count_of_type(room, 'upgrader') < 4:  # TODO: 5 before storage exists
-                if room.energyAvailable >= 550:
-                    spawn.createCreep([WORK, WORK, WORK, WORK, CARRY, MOVE, MOVE], "", {'cls': 'upgrader'})
-            elif room.controller.level == 8:
+
+
+            # upgraders
+
+            if to_construct > 300:
+                return
+
+            #  eee
+            # 12fe
+            # 1M2e
+            # E11
+            #
+            # E: source
+            # M: miner
+            # f: filler
+            # e: extension
+            # 1: accessible only to Miner: tower, terminal
+            # 2: accessible to both Miner and Filler: spawn, storage
+            # please note that it would be best for terminal and storage to be accessible. Also Spawn(2) must be accessible.
+            spawn = get_controller_spawn(room)
+            if room.energyCapacityAvailable >= 100*15 +50*3 +50*5:
+                spawn_it = False
                 if self.creep_registry.count_of_type(room, 'upgrader') < 1:
-                    if room.energyAvailable >= 100*15 +50*3 +50*5:
-                        spawn.createCreep(
-                            [
-                                WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK,
-                                CARRY, CARRY, CARRY,
-                                MOVE, MOVE, MOVE, MOVE, MOVE,
-                            ],
-                            "",
-                            {'cls': 'upgrader'},
-                        )
-                        return
-                    elif room.energyAvailable >= 550:
-                        spawn.createCreep([WORK, WORK, WORK, WORK, CARRY, MOVE, MOVE], "", {'cls': 'upgrader'})
+                    spawn_it = True
+                else:
+                    prespawn = 23 * CREEP_SPAWN_TIME
+                    upgrader = self.creep_registry.list_of_type('upgrader')[0]
+                    if upgrader.ticksToLive <= prespawn:
+                        spawn_it = True
+                if spawn_it:
+                    spawn.createCreep(
+                        [
+                            WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK,
+                            CARRY, CARRY, CARRY,  # get even more?
+                            MOVE, MOVE, MOVE, MOVE, MOVE,  # TODO: could save 250 energy / 1500 tics here if we spawned the guy and immediately moved him where he belongs
+                        ],
+                        "",
+                        {
+                            'memory': {'cls': 'upgrader'},
+                            # TODO: take energy from spawns first
+                            # TODO: 'directions': [TOP_RIGHT],
+                        }
+                    )
+                if room.controller.level == 8:
+                    return
+            elif room.energyCapacityAvailable >= 950:
+                if self.creep_registry.count_of_type(room, 'upgrader') < 2:
+                    spawn.createCreep([WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, CARRY, MOVE, MOVE], "", {'cls': 'upgrader'})
+            elif room.energyCapacityAvailable >= 650:
+                if self.creep_registry.count_of_type(room, 'upgrader') < 3:
+                    spawn.createCreep([WORK, WORK, WORK, WORK, WORK, CARRY, MOVE, MOVE], "", {'cls': 'upgrader'})
+            elif room.energyCapacityAvailable >= 550:
+                if self.creep_registry.count_of_type(room, 'upgrader') < 4:
+                    spawn.createCreep([WORK, WORK, WORK, WORK, CARRY, MOVE, MOVE], "", {'cls': 'upgrader'})
 
     def spawn_creeps_in_transition_period(self):
         room = self.room

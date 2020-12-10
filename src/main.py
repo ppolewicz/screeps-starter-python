@@ -27,16 +27,14 @@ class CreepRegistry:
             return 0
         return len(self.by_room[room])
     def count_of_type(self, room, creep_type):
-        if room not in self.by_room:
-            return 0
-        room_creeps = self.by_room[room]
-        #if room_creeps == undefined:
-        #    return 0
-        result = 0
-        for creep in room_creeps:
-            if creep.memory.cls == creep_type:
-                result += 1
-        #print('CreepRegistry.count_of_type(', room, creep_type, '):', result)
+        return len(self.list_of_type(room, creep_type))
+    def list_of_type(self, room, creep_type):
+        result = []
+        if room in self.by_room:
+            room_creeps = self.by_room[room]
+            for creep in room_creeps:
+                if creep.memory.cls == creep_type:
+                    result.append(creep)
         return result
     def register(self, room, creep):
         if room not in self.by_room:
@@ -48,9 +46,10 @@ def main():
     """
     Main game logic loop.
     """
-
-    creep_registry = CreepRegistry()
+    cpustats = {}
+    global cpustats
     imports = Game.cpu.getUsed()
+    creep_registry = CreepRegistry()
 
     if Game.cpu.bucket > 9000:
         Game.cpu.generatePixel()
@@ -132,8 +131,8 @@ def execute_actions(all_actions):
     all_actions.sort(key=lambda action_set: max(action.priority for action in action_set), reversed=True)
     total = 0
     for action_set in all_actions:
-        if Game.cpu.tickLimit < len(action_set)*0.2:
-            print('ran out of CPU before running %s' % action_set)
+        if Game.cpu.tickLimit < len(action_set)*0.2:  # TODO: this is actually not how the game works: the limit only affects the code exection. You can burn the entire bucket on actions in a single tick, if you want, just don't go over tickLimit with the code that schedules them
+            print('=== WARNING === ran out of CPU before running', action_set, 'total actions', len(all_actions), 'executed', total / 0.2)
             break
         for action in action_set:
             action.run()
