@@ -39,8 +39,10 @@ class RoomManagerRCL2(AbstractRoomManager):
                 size = 25
             #print('room size', room, size)
             desired_haulers = int(size / 10)  # TODO: can use less larger ones
-            if room.controller.level >= 5:
-                desired_haulers = 3  # TODO: when miners will man the links, we can reduce that to 1
+            if room.controller.level == 5:  # TODO: actually we should see if links are up and if we have miners with CARRY
+                desired_haulers = 2
+            elif room.controller.level >= 6:
+                desired_haulers = 1
             if to_construct_sum > 12000 and builders < 5 and miners >= 1 or \
                to_construct_sum > 9000 and builders < 4 and miners >= 1 or \
                to_construct_sum > 6000 and builders < 3 and miners >= 1 or \
@@ -58,7 +60,7 @@ class RoomManagerRCL2(AbstractRoomManager):
                         parts = [WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE]
                     spawn.createCreep(parts, "", {'cls': 'builder'})
             elif miners < 2:  #TODO number of sources
-                if room.controller.level <= 4 or True:  # TODO
+                if room.controller.level <= 4: # or True:  # TODO
                     if room.energyAvailable >= 2200:
                         spawn.createCreep([WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, MOVE, MOVE, MOVE, MOVE], "", {'cls': 'miner'})
                     elif room.energyAvailable >= 1650:
@@ -68,13 +70,13 @@ class RoomManagerRCL2(AbstractRoomManager):
                     elif room.energyAvailable >= 550:
                         spawn.createCreep([WORK, WORK, WORK, WORK, WORK, MOVE], "", {'cls': 'miner'})
                 else:  # link miners
-                    if room.energyAvailable >= 3900:  # this one is optimized for CPU, really
+                    if room.energyAvailable >= 3700:  # this one is optimized for CPU, really
                         spawn.createCreep([
                             WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK,
                             WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK,
                             WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK,
                             CARRY, CARRY, CARRY, CARRY, CARRY, CARRY,
-                            CARRY, CARRY, CARRY, CARRY, CARRY, CARRY,
+                            CARRY, CARRY,
                             MOVE, MOVE, MOVE, MOVE, MOVE, MOVE,  # TODO: they should spawn on the position and never move
                         ], "", {'cls': 'miner'})
                     elif room.energyAvailable >= 3600:
@@ -134,23 +136,29 @@ class RoomManagerRCL2(AbstractRoomManager):
             # 2: accessible to both Miner and Filler: spawn, storage
             # please note that it would be best for terminal and storage to be accessible. Also Spawn(2) must be accessible.
             spawn = get_controller_spawn(room)
+            if spawn.spawning:
+                return  # spawn is busy
             if room.energyCapacityAvailable >= 100*15 +50*3 +50*5:
                 spawn_it = False
                 if self.creep_registry.count_of_type(room, 'upgrader') < 1:
                     spawn_it = True
                 else:
                     prespawn = 23 * CREEP_SPAWN_TIME
-                    upgrader = self.creep_registry.list_of_type('upgrader')[0]
-                    if upgrader.ticksToLive <= prespawn:
-                        spawn_it = True
+                    for upgrader in self.creep_registry.list_of_type('upgrader'):  # this behaves funny, 'undefined', there is only one, lets go
+                        if upgrader.ticksToLive <= prespawn:
+                            spawn_it = True
+                        break
                 if spawn_it:
-                    spawn.createCreep(
+                    newname = room.name + 'upg'
+                    while Game.creeps[newname] != undefined:
+                        newname += '1'
+                    spawn.spawnCreep(  # TODO: use spawnCreep everywhere
                         [
                             WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK,
                             CARRY, CARRY, CARRY,  # get even more?
                             MOVE, MOVE, MOVE, MOVE, MOVE,  # TODO: could save 250 energy / 1500 tics here if we spawned the guy and immediately moved him where he belongs
                         ],
-                        "",
+                        newname,  # TODO: uhhhh
                         {
                             'memory': {'cls': 'upgrader'},
                             # TODO: take energy from spawns first

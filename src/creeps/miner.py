@@ -1,7 +1,9 @@
+__pragma__('noalias', 'name')
 __pragma__('noalias', 'undefined')
 
 from creeps.scheduled_action import ScheduledAction
 from creeps.abstract import AbstractCreep
+from creeps.parts.carry import Carry
 from utils import get_thing_at_coordinates
 from utils import search_room
 from utils import part_count
@@ -11,7 +13,7 @@ from utils import part_count
 # TODO: if you are at the spawn, decide whether to recycle itself or renew itself
 
 
-class Miner(AbstractCreep):
+class Miner(AbstractCreep, Carry):
     ICON = '⛏️'
     def _run(self):
         super()._run()
@@ -38,12 +40,27 @@ class Miner(AbstractCreep):
                     #                ScheduledAction.transfer(creep, s, RESOURCE_ENERGY, priority=80)
                     #            )
                     #        break  # only handle one link
-                    if source.ticksToRegeneration == undefined or (source.ticksToRegeneration % (works/5) == 0):
+                    if source.ticksToRegeneration == undefined or (source.ticksToRegeneration % (works/5) == 0):  # TODO: mine faster if we were absent for some reason
                         actions.append(
                             ScheduledAction.harvest(creep, source)
                         )
                     else:
                         pass # conserve CPU
+                    # TODO: if we have CARRY parts, we sit near a link and it's below half capacity, actions.append(ScheduledAction.transfer(creep, link, RESOURCE_ENERGY, min(link_capacity, creep.store[RESOURCE_ENERGY]))
+                    link = self._get_neighboring_nonfull_link(creep)
+                    if link and part_count(creep, 'carry') >= 1:
+                        if creep.store.getFreeCapacity(RESOURCE_ENERGY) == 0:
+                            actions.append(
+                                ScheduledAction.transfer(
+                                    creep,
+                                    link,
+                                    RESOURCE_ENERGY,
+                                    min(
+                                        link.store.getFreeCapacity(RESOURCE_ENERGY),
+                                        creep.store[RESOURCE_ENERGY],
+                                    )
+                                )
+                            )
                     return actions
 
         for source in sources:

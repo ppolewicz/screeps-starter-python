@@ -22,7 +22,7 @@ class CarrySource:
     def _get_closest_energetic_container(cls, creep):
         #free_capacity = creep.store.getFreeCapacity(RESOURCE_ENERGY)
         source_filter = lambda s: (
-            (s.structureType == STRUCTURE_CONTAINER or s.structureType == STRUCTURE_STORAGE or s.structureType == STRUCTURE_TERMINAL)
+            (s.structureType == STRUCTURE_CONTAINER or s.structureType == STRUCTURE_STORAGE or s.structureType == STRUCTURE_TERMINAL or s.structureType == STRUCTURE_LINK)
             and s.store[RESOURCE_ENERGY] >= 50
         )
         result = creep.pos.findClosestByRange(FIND_STRUCTURES, filter=source_filter)
@@ -31,7 +31,7 @@ class CarrySource:
 
     @classmethod
     def _get_nearby_dropped_resource(cls, creep):
-        sources = creep.pos.findInRange(FIND_DROPPED_RESOURCES, 3)
+        sources = creep.pos.findInRange(FIND_DROPPED_RESOURCES, 1)
         if len(sources) >= 1:
             return sources[0]
 
