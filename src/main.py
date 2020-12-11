@@ -46,13 +46,13 @@ def main():
     """
     Main game logic loop.
     """
+    if Game.cpu.bucket == 10000:
+        Game.cpu.generatePixel()
+
     cpustats = {}
     global cpustats
     imports = Game.cpu.getUsed()
     creep_registry = CreepRegistry()
-
-    if Game.cpu.bucket > 9000:
-        Game.cpu.generatePixel()
 
     all_actions = []
     # Register each creep
