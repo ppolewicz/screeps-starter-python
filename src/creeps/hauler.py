@@ -52,6 +52,7 @@ class Hauler(Harvester):
 
     def _get_source_getters(self):
         sources = []
+        sources.append(self._get_nearby_dropped_resource)
         if self.room_really_needs_refill():
             sources.append(self._get_nonempty_storage)
             sources.append(self._get_nonempty_terminal)
