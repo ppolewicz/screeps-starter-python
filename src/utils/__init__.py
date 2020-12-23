@@ -79,3 +79,9 @@ def around_range(room, x, y, distance, vis=None):
         if vis is not None:
             room.visual.circle(x+x_diff, y+y_diff, {'stroke': vis})
     return result
+def points_to_path(points):
+    return [
+        __new__(RoomPosition(point.x, point.y, point.roomName)) for point in points
+    ]
+
+

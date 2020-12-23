@@ -1,6 +1,7 @@
 from creeps.parts.carry import Carry
 from creeps.parts.work import Work
 from creeps.scheduled_action import ScheduledAction
+from utils import points_to_path
 
 __pragma__('noalias', 'name')
 __pragma__('noalias', 'undefined')
