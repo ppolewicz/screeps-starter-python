@@ -1,3 +1,5 @@
+from creeps.scheduled_action import ScheduledAction
+
 def part_count(creep, of_type):
     count = 0
     for part in creep.body:

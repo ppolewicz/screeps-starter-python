@@ -29,10 +29,43 @@ class AbstractCreep:
         return self.DEBUG or self.creep.memory.debug
     debug = property(get_debug)
 
+    def get_smart_move_actions(self, where_pos):
+        creep = self.creep
+        if creep.pos.roomName == where_pos.roomName:  # just a regular single-room move
+            return [ScheduledAction.moveTo(creep, where_pos)]
+
+        limit = 10000
+        if Game.cpu.tickLimit < limit/1000:
+            print('WARNING:', creep.name, 'cannot pathfind, not enough cpu')
+            return []
+        result = PathFinder.search(
+            creep.pos,
+            where_pos,
+            {
+                'plainCost': 2,
+                'swampCost': 10,
+                'maxOps': limit,  # 1000 ops = 1 CPU
+                #'maxRooms': 16,  # max 64
+                #'maxCost': 123456,
+            }
+        )
+        # result structure
+        # path	An array of RoomPosition objects.
+        # ops	Total number of operations performed before this path was calculated.
+        # cost	The total cost of the path as derived from plainCost, swampCost and any given CostMatrix instances.
+        # incomplete (flag)
+        if result['ops'] >= 0.8*limit:
+            print('WARNING: get_smart_move_actions() for', creep.name, 'used', result['ops'], 'mCPU to find path to', where_pos, 'in', where_pos.roomName)
+        creep.memory.path = result['path']
+        return [ScheduledAction.moveByPath(creep, creep.memory.path)]
+
     def pre_run(self):
         creep = self.creep
         if self.debug:
             creep.say(creep.name[:8] + self.ICON)
+
+        if creep.memory.path != undefined:
+            return [ScheduledAction.moveByPath(creep, points_to_path(creep.memory.path))]
 
         if creep.memory.target_flag != undefined:
             target_flag_name = creep.memory.target_flag
@@ -47,17 +80,16 @@ class AbstractCreep:
                 else:
                     return []
             else:
-                return [ScheduledAction.moveTo(self.creep, target)]
+                return self.get_smart_move_actions(target.pos)
 
         if creep.memory.room != undefined and creep.memory.room != creep.room.name:
             target_room = Game.rooms[creep.memory.room]
             if target_room == undefined:
-                print(creep, 'is in', creep.room, 'but should be in', creep.memory.room, 'which we have no eyes on')
                 rp = __new__(RoomPosition(25, 25, creep.memory.room))
-                print('rp=', rp)
-                return [ScheduledAction.moveTo(self.creep, rp)]
+                #print(creep, 'is in', creep.room, 'but should be in', creep.memory.room, 'which we have no eyes on', rp)
+                return self.get_smart_move_actions(rp)
             else:
-                return [ScheduledAction.moveTo(self.creep, target_room.controller)]
+                return self.get_smart_move_actions(target_room.controller.pos)
 
             #roompos = RoomPosition(24, 24, creep.memory.room)
             #print('roompos', roompos, creep.memory.room)

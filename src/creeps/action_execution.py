@@ -26,6 +26,8 @@ class ActionExecution:
             result = self.harvest()
         elif self.method == 'moveTo':
             result = self.moveTo()
+        elif self.method == 'moveByPath':
+            result = self.moveByPath()
         elif self.method == 'claimController':
             result = self.claimController()
         elif self.method == 'upgradeController':
@@ -45,10 +47,13 @@ class ActionExecution:
         if result != OK:
             if self.on_error:
                 self.on_error()
+                return
+            elif self.method == 'moveByPath':
+                del self.creep.memory.path
             else:
                 del self.creep.memory.target
                 del self.creep.memory.source
-                print('ERROR', self, ERRORS[result])
+            print('ERROR', self, ERRORS[result])
     def build(self):
         return self.creep.build(self.args[0])
     def harvest(self):
@@ -58,6 +63,11 @@ class ActionExecution:
             return OK
         where = self.args[0]
         return self.creep.moveTo(where, {'visualizePathStyle': {}})
+    def moveByPath(self):
+        if self.creep.fatigue > 0:
+            return OK
+        where = self.args[0]
+        return self.creep.moveByPath(where, {'visualizePathStyle': {'stroke': '#0ff',}})
     def claimController(self):
         return self.creep.claimController(self.args[0])
     def upgradeController(self):

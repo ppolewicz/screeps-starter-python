@@ -19,6 +19,10 @@ class ScheduledAction:
         return ActionExecution(creep, 'moveTo', target, on_error=on_error, priority=priority)
 
     @classmethod
+    def moveByPath(cls, creep, path, on_error=None, priority=100):
+        return ActionExecution(creep, 'moveByPath', path, on_error=on_error, priority=priority)
+
+    @classmethod
     def upgradeController(cls, creep, target, priority=100):
         return ActionExecution(creep, 'upgradeController', target, priority=priority)
 
