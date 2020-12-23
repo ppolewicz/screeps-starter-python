@@ -2,6 +2,7 @@ __pragma__('noalias', 'name')
 __pragma__('noalias', 'undefined')
 
 from utils import get_first_spawn
+from utils.errors import ERRORS
 
 g_links = dict()
 

@@ -9,7 +9,7 @@ __pragma__('noalias', 'set')
 __pragma__('noalias', 'type')
 __pragma__('noalias', 'update')
 
-from utils import ERRORS
+from utils.errors import ERRORS
 
 
 class ActionExecution:
