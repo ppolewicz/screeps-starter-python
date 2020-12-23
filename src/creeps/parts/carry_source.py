@@ -1,4 +1,5 @@
 __pragma__('noalias', 'undefined')
+__pragma__('noalias', 'name')
 
 from creeps.scheduled_action import ScheduledAction
 
@@ -19,14 +20,66 @@ class CarrySource:
         return source
 
     @classmethod
+    def print_debug(cls, creep, *args):
+        #if creep.room.name == 'W27N1':
+        #if creep.room.name == 'W24N2':  # that explodes for some reason
+        #print(*args)
+        return
+
+    @classmethod
+    def _get_refill_source(self, creep):
+        def source_filter(s):
+            if not (
+                s.structureType == STRUCTURE_CONTAINER or
+                s.structureType == STRUCTURE_STORAGE or
+                s.structureType == STRUCTURE_TERMINAL or
+                s.structureType == STRUCTURE_LINK
+            ):
+                return False  # not that type of a structure
+            if not s.store:
+                return False  # construction site
+            if s.store[RESOURCE_ENERGY] < 50:
+                return False  # not enough energy
+            return True  # we don't care if it belongs to a miner or upgrader or whatever, just get it.
+        result = creep.pos.findClosestByRange(FIND_STRUCTURES, filter=source_filter)
+        return result
+
+
+    @classmethod
     def _get_closest_energetic_container(cls, creep):
         #free_capacity = creep.store.getFreeCapacity(RESOURCE_ENERGY)
-        source_filter = lambda s: (
-            (s.structureType == STRUCTURE_CONTAINER or s.structureType == STRUCTURE_STORAGE or s.structureType == STRUCTURE_TERMINAL or s.structureType == STRUCTURE_LINK)
-            and s.store[RESOURCE_ENERGY] >= 50
-        )
+        cls.print_debug(creep, '_get_closest_energetic_container() by', creep.name)
+        # TODO: should not take from miner links!
+        def source_filter(s):
+            #if creep.room.name == 'W27N1': #and s.id == '5fc61ef4fd39edb21752082a':
+            #   cls.print_debug(creep, '=== CONSIDERING', s.id)
+            if not (s.structureType == STRUCTURE_CONTAINER or s.structureType == STRUCTURE_LINK):
+            #if not (s.structureType == STRUCTURE_CONTAINER or s.structureType == STRUCTURE_STORAGE or s.structureType == STRUCTURE_TERMINAL or s.structureType == STRUCTURE_LINK):
+                if s.id == '5fc61ef4fd39edb21752082a':
+                    cls.print_debug(creep, '=== TYPE', s.id)
+                return False  # not that type of a structure
+            if not s.store:
+                cls.print_debug(creep, '=== CONSTRUCTION SITE', s.id)
+                return False
+            if s.store[RESOURCE_ENERGY] < 50:
+                #if creep.room.name == 'W27N1':# and s.id == '5fc61ef4fd39edb21752082a':
+                #    cls.print_debug(creep, '=== POOR', s.id)
+                return False  # not enough energy
+            sources = s.pos.findInRange(FIND_SOURCES, 2)
+            if sources != undefined and len(sources) >= 1:
+                cls.print_debug(creep, '=== BELONGS TO A MINER', s.id, sources)
+                return False
+            creeps = s.pos.lookFor(LOOK_CREEPS)
+            if creeps != undefined:
+                for c2 in creeps:
+                    if c2.memory.cls == 'miner':
+                        cls.print_debug(creep, '=== MINER', s.id)
+                        return False
+            cls.print_debug('=== GOOD', s.id)
+            #creep.room.visual.circle(s.pos.x, s.pos.y, {'stroke': 'red'})
+            return True
         result = creep.pos.findClosestByRange(FIND_STRUCTURES, filter=source_filter)
-        #print('closest energetic container for', creep, 'is', result)
+        #cls.print_debug(creep, 'closest energetic container for', creep, 'is', result)
         return result
 
     @classmethod
@@ -47,6 +100,7 @@ class CarrySource:
         if source:
             return source
         for source_getter_id, source_getter in enumerate(self._get_source_getters()):
+            #print('considering source_getter', source_getter_id)
             source = source_getter(self.creep)
             if source and source.pos != None:
                 self.creep.memory.source = source.id
@@ -61,6 +115,21 @@ class CarrySource:
         container = creep.pos.findInRange(FIND_STRUCTURES, 1, filter=source_filter)
         if len(container) >= 1:
             return container[0]
+
+    @classmethod
+    def _get_neighboring_nonfull_util(cls, creep):
+        source_filter = lambda s: (
+            (
+                s.structureType == STRUCTURE_SPAWN or
+                s.structureType == STRUCTURE_EXTENSION or
+                s.structureType == STRUCTURE_TOWER
+            )
+            and s.energy < s.energyCapacity
+            and s.store != undefined
+        )
+        util = creep.pos.findInRange(FIND_MY_STRUCTURES, 1, filter=source_filter)
+        if len(util) >= 1:
+            return util[0]
 
     @classmethod
     def _get_neighboring_nonfull_link(cls, creep):

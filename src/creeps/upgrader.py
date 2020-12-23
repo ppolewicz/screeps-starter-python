@@ -15,7 +15,7 @@ from creeps.harvester import Harvester
 class Upgrader(Harvester):
     ICON = '👍'
     def _get_source_getters(self):
-        if self.creep.room.controller.level == 8 or self.class_exists('hauler'):
+        if self.creep.room.controller.level >= 4 or self.class_exists('hauler'):
             return [self._get_nearby_dropped_resource, self._get_neighboring_nonempty_link, self._get_source_of_faith]
         return super()._get_source_getters()
 

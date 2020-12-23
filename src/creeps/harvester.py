@@ -20,7 +20,8 @@ class Harvester(EasyCreep):
             result.append(self._get_dropped_resource)
         else:
             result.append(self._get_nearby_dropped_resource)
-        result.append(self._get_closest_energetic_container)
+        if self.creep.room.energyCapacityAvailable - self.creep.room.energyAvailable >= 1 or self.creep.memory.cls == 'builder':
+            result.append(self._get_refill_source)
         result.append(self._get_random_energetic_ruin)
         result.append(self._get_neighboring_source)
         result.append(self._get_nonempty_storage)
@@ -38,7 +39,7 @@ class Harvester(EasyCreep):
             result.append(self._get_closest_nonempty_util_building)
             #else:
             #    result.append(self._get_random_nonempty_util_building)
-        # TODO XXX: critical repairs
+        # TODO XXX: critical repairs?
         if not self.class_exists('builder') or self.creep.memory.cls == 'builder':
             result.append(self._get_closest_construction_site)
         result.append(self._get_best_free_church)

@@ -42,7 +42,14 @@ class RoomManagerRCL2(AbstractRoomManager):
             if room.controller.level == 5:  # TODO: actually we should see if links are up and if we have miners with CARRY
                 desired_haulers = 2
             elif room.controller.level >= 6:
-                desired_haulers = 1
+                desired_haulers = 1  # with creeps fully optimized for CPU a single filler is not enough
+                #if room.energyCapacityAvailable - room.energyAvailable >= 2401:
+                #    desired_haulers = 2  # with creeps fully optimized for CPU just one filler is not enough
+                #    Game.notify(
+                #        'Room ' + room.name + ' was low on energy (' + str(room.energyCapacityAvailable) + ') and needed extra haulers',
+                #        #1,  # group these notifications for X min
+                #        60,  # group these notifications for X min
+                #    )
             if to_construct_sum > 12000 and builders < 5 and miners >= 1 or \
                to_construct_sum > 9000 and builders < 4 and miners >= 1 or \
                to_construct_sum > 6000 and builders < 3 and miners >= 1 or \
@@ -59,7 +66,7 @@ class RoomManagerRCL2(AbstractRoomManager):
                     else:
                         parts = [WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE]
                     spawn.createCreep(parts, "", {'cls': 'builder'})
-            elif miners < 2:  #TODO number of sources
+            elif miners < 2:  #TODO number of sources in the room
                 if room.controller.level <= 4: # or True:  # TODO
                     if room.energyAvailable >= 2200:
                         spawn.createCreep([WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, MOVE, MOVE, MOVE, MOVE], "", {'cls': 'miner'})
@@ -70,7 +77,7 @@ class RoomManagerRCL2(AbstractRoomManager):
                     elif room.energyAvailable >= 550:
                         spawn.createCreep([WORK, WORK, WORK, WORK, WORK, MOVE], "", {'cls': 'miner'})
                 else:  # link miners
-                    if room.energyAvailable >= 3700:  # this one is optimized for CPU, really
+                    if room.energyAvailable >= 3700 and False:  # this one is overoptimized for CPU, consumes a lot of energy
                         spawn.createCreep([
                             WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK,
                             WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK,
@@ -79,7 +86,7 @@ class RoomManagerRCL2(AbstractRoomManager):
                             CARRY, CARRY,
                             MOVE, MOVE, MOVE, MOVE, MOVE, MOVE,  # TODO: they should spawn on the position and never move
                         ], "", {'cls': 'miner'})
-                    elif room.energyAvailable >= 3600:
+                    elif room.energyAvailable >= 3600 and False:  # this too
                         spawn.createCreep([  # TODO: those should be calculated by math from energyAvailable, not templated
                             WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK,
                             WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK,
@@ -92,15 +99,20 @@ class RoomManagerRCL2(AbstractRoomManager):
                             WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK,
                             WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK,
                             CARRY, CARRY, CARRY, CARRY,
-                            MOVE, MOVE, MOVE, MOVE,
+                            MOVE, MOVE, MOVE, MOVE,  # TODO: could save 200*2/1500, 400 per creep life, if it didn't move
                         ], "", {'cls': 'miner'})
                     elif room.energyAvailable >= 1800:
-                        spawn.createCreep([WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE], "", {'cls': 'miner'})
+                        spawn.createCreep([
+                            WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK,
+                            WORK, WORK, WORK, WORK, WORK,
+                            CARRY, CARRY, CARRY,
+                            MOVE, MOVE, MOVE
+                        ], "", {'cls': 'miner'})
                     elif room.energyAvailable >= 1200:
                         spawn.createCreep([WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE], "", {'cls': 'miner'})
                     elif room.energyAvailable >= 600:
                         spawn.createCreep([WORK, WORK, WORK, WORK, WORK, CARRY, MOVE], "", {'cls': 'miner'})
-                    elif room.energyAvailable >= 550:
+                    elif room.energyAvailable >= 550 and room.controller.level <= 4:  # non-link miners only for non-link rooms
                         spawn.createCreep([WORK, WORK, WORK, WORK, WORK, MOVE], "", {'cls': 'miner'})
             #elif self.creep_registry.count_of_type(room, 'hauler') < 2: #TODO len(room.sources):  # TODO: ? 2
             #    if room.energyAvailable >= 550:
@@ -155,7 +167,7 @@ class RoomManagerRCL2(AbstractRoomManager):
                     spawn.spawnCreep(  # TODO: use spawnCreep everywhere
                         [
                             WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK,
-                            CARRY, CARRY, CARRY,  # get even more?
+                            CARRY, CARRY, CARRY,  # TODO: get even more?
                             MOVE, MOVE, MOVE, MOVE, MOVE,  # TODO: could save 250 energy / 1500 tics here if we spawned the guy and immediately moved him where he belongs
                         ],
                         newname,  # TODO: uhhhh
@@ -326,6 +338,8 @@ class RoomManagerRCL2(AbstractRoomManager):
         link_filter = lambda s: (
             s.structureType == STRUCTURE_LINK
         )
+
+        handled = set()
         for what, obj in [
                 ('controller', room.controller),
                 ('storage', room.storage),
@@ -338,6 +352,7 @@ class RoomManagerRCL2(AbstractRoomManager):
             structures = obj.pos.findInRange(FIND_STRUCTURES, 3, filter=link_filter)  # TODO: if faith source is close to energy source, this will mess up
             if len(structures) >= 1:
                 setattr(links, what + '_id', structures[0].id)
+                handled.add(structures[0].id)
             #else:
             #    print('no link for', what, 'in', room)
 
@@ -345,6 +360,18 @@ class RoomManagerRCL2(AbstractRoomManager):
             miner_links = miner_container.findInRange(FIND_STRUCTURES, 1, filter=link_filter)
             if len(miner_links):
                 links.source_ids.append(miner_links[0].id)
+                handled.add(miner_links[0].id)
+
+        for link in room.find(FIND_STRUCTURES, filter=link_filter):
+            if link == undefined:
+                continue
+            #self.debug_log('handled', handled, 'link.id', link.id)
+            #if link.id == links.controller_id:
+            #    continue
+            if handled.includes(link.id):
+                #self.debug_log(link.id, 'was already handled')
+                continue
+            links.other_ids.append(link.id)
 
         #print('setting links', links, 'in', room)
         g_links[room.name] = links

@@ -34,7 +34,7 @@ class Hauler(Harvester):
         targets = [
             cls._get_closest_nonempty_util_building,
             #cls._get_random_nonempty_util_building,  # TODO: balance
-            cls._get_neighboring_nonfull_link,
+            #cls._get_neighboring_nonfull_link,       # TODO: remove that function if miner doesn't use it
         ]
         #print('g_links', g_links, g_links.get)
         #if not g_links or g_links == undefined:
@@ -46,18 +46,29 @@ class Hauler(Harvester):
             targets.append(
                 cls._get_random_non_miner_container,
             )
-        targets.append(cls._get_nonfull_terminal)
-        targets.append(cls._get_nonfull_storage)
+        fullest_miner_container = cls._get_fullest_miner_container(creep)
+        if fullest_miner_container != undefined and fullest_miner_container.store[RESOURCE_ENERGY] > 0:
+            #print('yeah', creep.name, fullest_miner_container.store[RESOURCE_ENERGY], fullest_miner_container.id)
+            targets.append(cls._get_nonfull_terminal)
+            targets.append(cls._get_nonfull_storage)
+        #else:
+        #    print('nope', creep.name)
         return targets
 
     def _get_source_getters(self):
         sources = []
         sources.append(self._get_nearby_dropped_resource)
+        if self.creep.room.energyCapacityAvailable - self.creep.room.energyAvailable >= 1:
+            sources.append(self._get_refill_source)
         if self.room_really_needs_refill():
             sources.append(self._get_nonempty_storage)
             sources.append(self._get_nonempty_terminal)
         sources.append(self._get_neighboring_miner_container)
         sources.append(self._get_dropped_resource)
         sources.append(self._get_random_energetic_ruin)
+        #if self.creep.room.controller.level <= 4:
         sources.append(self._get_fullest_miner_container)
+        #sources.append(self._get_closest_energetic_container)
+        #else:
+        #    sources.append(self._get_fullest_miner_container)  # TODO: this is until miners can figure out what to do with energy
         return sources

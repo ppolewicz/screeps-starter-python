@@ -6,7 +6,8 @@ from creeps.abstract import AbstractCreep
 from creeps.parts.carry import Carry
 from utils import get_thing_at_coordinates
 from utils import search_room
-from utils import part_count
+from utils import part_count, make_transfer_action
+
 
 # TODO: if the source is empty and there is another non-reserved source in that room that can be reached before our current source resets, then switch designated source to that new one and go to it
 # TODO: if all sources are empty and we can reach spawn before sources reset + our spawning time, go to the spawn
@@ -15,6 +16,39 @@ from utils import part_count
 
 class Miner(AbstractCreep, Carry):
     ICON = '⛏️'
+    @classmethod
+    def _get_transfer_to_link_actions(cls, creep, source):
+        link = cls._get_neighboring_nonfull_link(creep)
+        if link and part_count(creep, 'carry') >= 1:
+            #print(creep.name, part_count(creep, 'carry'), creep.store.getFreeCapacity(RESOURCE_ENERGY), link.store.getFreeCapacity(RESOURCE_ENERGY))
+            if creep.store.getFreeCapacity(RESOURCE_ENERGY) == 0:
+                return [ScheduledAction.transfer(
+                    creep,
+                    link,
+                    RESOURCE_ENERGY,
+                    min(
+                        link.store.getFreeCapacity(RESOURCE_ENERGY),
+                        creep.store[RESOURCE_ENERGY],
+                    )
+                )]
+        return []
+
+    def _should_mine(self, source):
+        works = part_count(self.creep, 'work')
+        if source.ticksToRegeneration == undefined:
+            return True  # new source
+        if source.energy >= (ENERGY_REGEN_TIME-source.ticksToRegeneration) * works * HARVEST_POWER:
+            return True  # we won't mine fast enough to get it all even if we ran 100%
+
+        should_have_mined = source.energyCapacity * ((ENERGY_REGEN_TIME-source.ticksToRegeneration)/ENERGY_REGEN_TIME)
+        actually_mined = source.energyCapacity - source.energy
+        if actually_mined <= should_have_mined:
+            #print(self.creep.name, 'actually mining', should_have_mined, actually_mined)
+            return True
+        return False
+        #if creep.name == 'Mia':
+        #    print('kkkkkkkkkk', source.energy, (ENERGY_REGEN_TIME-source.ticksToRegeneration) * works * HARVEST_POWER)
+
     def _run(self):
         super()._run()
         creep = self.creep
@@ -25,8 +59,6 @@ class Miner(AbstractCreep, Carry):
         if thing:
             for source in sources:
                 if creep.pos.isNearTo(source):
-                    works = part_count(creep, 'work')
-                    #if source.ticksToRegeneration == undefined or source.energy / source.ticksToRegeneration > works * HARVEST_POWER:  # TODO: check for off-by-one
                     #print(creep, source.ticksToRegeneration, source.ticksToRegeneration % (works/5) == 0)
                     actions = []
                     #if creep.store.getCapacity(RESOURCE_ENERGY) > 0 and creep.store[RESOURCE_ENERGY] > 0:
@@ -40,27 +72,20 @@ class Miner(AbstractCreep, Carry):
                     #                ScheduledAction.transfer(creep, s, RESOURCE_ENERGY, priority=80)
                     #            )
                     #        break  # only handle one link
-                    if source.ticksToRegeneration == undefined or (source.ticksToRegeneration % (works/5) == 0):  # TODO: mine faster if we were absent for some reason
-                        actions.append(
-                            ScheduledAction.harvest(creep, source)
-                        )
-                    else:
-                        pass # conserve CPU
-                    # TODO: if we have CARRY parts, we sit near a link and it's below half capacity, actions.append(ScheduledAction.transfer(creep, link, RESOURCE_ENERGY, min(link_capacity, creep.store[RESOURCE_ENERGY]))
-                    link = self._get_neighboring_nonfull_link(creep)
-                    if link and part_count(creep, 'carry') >= 1:
-                        if creep.store.getFreeCapacity(RESOURCE_ENERGY) == 0:
+                    if self._should_mine(source):
+                        if source.energy != 0:
                             actions.append(
-                                ScheduledAction.transfer(
-                                    creep,
-                                    link,
-                                    RESOURCE_ENERGY,
-                                    min(
-                                        link.store.getFreeCapacity(RESOURCE_ENERGY),
-                                        creep.store[RESOURCE_ENERGY],
-                                    )
-                                )
+                                ScheduledAction.harvest(creep, source)
                             )
+                    transfer_to_link = self._get_transfer_to_link_actions(creep, source)
+                    if len(transfer_to_link) >= 1:
+                        actions.extend(transfer_to_link)
+                    else:
+                        util = self._get_neighboring_nonfull_util(creep)
+                        if util:
+                            a = make_transfer_action(creep, util)
+                            if a:
+                                return [a]
                     return actions
 
         for source in sources:
@@ -69,15 +94,33 @@ class Miner(AbstractCreep, Carry):
             if creep.pos.isEqualTo(where.x, where.y):
                 # mine regardless of whether there is a container or not
                 # other creeps will come and pick it up, use it to build the container
-                return [ScheduledAction.harvest(creep, source)]
+                actions = []
+                if self._should_mine(source):
+                    actions.append(ScheduledAction.harvest(creep, source))
+                transfer_to_link = self._get_transfer_to_link_actions(creep, source)
+                if len(transfer_to_link) >= 1:
+                    actions.extend(transfer_to_link)
+                return actions
 
             who = room.lookForAt(LOOK_CREEPS, where.x, where.y)
+            actions = []
             if len(who) >= 1:
                 # some other creep is currently there
                 if not who[0].my:
                     continue
                 if who[0].memory.cls == 'miner':  # and it's a miner!
                     continue  # lets try another source
-            return [ScheduledAction.moveTo(creep, room.getPositionAt(where.x, where.y))]
-        print('WARNING', creep, 'has no source to mine')
+                elif who[0].pos.isNearTo(creep.pos):
+                    actions.append(
+                        ScheduledAction.moveTo(
+                            who[0],
+                            creep.pos,
+                        )
+                    )
+                    Game.notify('swapping creeps at a mining station in ' + creep.room.name + ', ' + str(who[0]) + ' for ' + creep.name, 30)
+            actions.append(
+                ScheduledAction.moveTo(creep, room.getPositionAt(where.x, where.y))
+            )
+            return actions
+        Game.notify('WARNING: ' + creep.name + ' is a miner with no source to mine', 30)
         return []

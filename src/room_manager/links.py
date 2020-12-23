@@ -3,6 +3,7 @@ class Links:
         self.mineral_id = None
         self.controller_id = None
         self.source_ids = []
+        self.other_ids = []
         self.storage_id = None
         self.terminal_id = None
     def get_mineral(self):
@@ -15,6 +16,8 @@ class Links:
         return Game.getObjectById(self.storage_id)
     def get_terminal(self):
         return Game.getObjectById(self.terminal_id)
+    def get_others(self):
+        return [Game.getObjectById(s) for s in self.other_ids]
     def operational(self):
         return self.controller_id is not None and len(self.source_ids) == 2  # TODO: == number of sources in the room
     def __str__(self):

@@ -11,7 +11,7 @@ class AbstractRoomManager:
     BUILD_SCHEDULE = 100  # try to build once every n ticks
     SPAWN_SCHEDULE = 10
     LINKS_SCHEDULE = 1
-    LINK_MIN_TRANSFER_AMOUNT = LINK_CAPACITY / 2
+    LINK_MIN_TRANSFER_AMOUNT = LINK_CAPACITY / 4
     DEBUG_VIS = dict({
         STRUCTURE_ROAD: {'stroke': '#00ff00'},
         STRUCTURE_EXTENSION: {'stroke': 'yellow'},
@@ -48,13 +48,18 @@ class AbstractRoomManager:
             self.spawn_creeps()
 
         our_links = g_links.get(self.room.name)
+        if our_links == undefined:
+            Game.notify(
+                'Global reset detected at ' + self.room.name + ', current bucket: ' + str(Game.cpu.bucket),
+                60,  # group these notifications for X min
+            )
         if Game.time % self.BUILD_SCHEDULE == room_id % self.BUILD_SCHEDULE or not self.enable_building or our_links == undefined:
-            print('running build planner for', self.room.name, self.enable_building)  # XXX
+            print('running build planner for', self.room.name, self.enable_building)
             self.run_build()
-            return []  # we have to return because the link cache doesn't work yet
+            #return []  # we have to return here because the link cache doesn't work yet for some reason
 
         if self.room.controller.level >= 5 and Game.time % self.LINKS_SCHEDULE == (room_id+1) % self.LINKS_SCHEDULE:
-            if len(g_links) and our_links != undefined:  # build scheduler updates it
+            if len(g_links) >= 1 and our_links != undefined:  # build scheduler updates it
                 self.run_links(our_links)
             else:
                 print('WARNING: not running links in', self.room.name, 'because they were not cached yet')
@@ -66,31 +71,62 @@ class AbstractRoomManager:
         action_sets = []
         return action_sets
 
+    def debug_log(self, *args):
+        DEBUG_ROOMS = []
+        #DEBUG_ROOMS = ['W24N2']
+        if DEBUG_ROOMS.includes(self.room.name):
+            print(*args)
+
     def run_links(self, our_links):
-        #start = Game.cpu.getUsed()
         controller_link = our_links.get_controller()
         if not controller_link:
             return
-        #print('============================ running links in', self.room.name, our_links, our_links.get_controller())
-        if controller_link.store.getFreeCapacity(RESOURCE_ENERGY) >= self.LINK_MIN_TRANSFER_AMOUNT:
-            #print('////////////////////////////', self.room.name, 'controller needs link filled', our_links.get_sources())
-            for source_link in our_links.get_sources():
-                if source_link.store[RESOURCE_ENERGY] < self.LINK_MIN_TRANSFER_AMOUNT:
-                    #print('----------------------------', source_link, 'does not have enough to send to controller', source_link.store[RESOURCE_ENERGY])
-                    continue
-                amount = min(
-                    controller_link.store.getFreeCapacity(RESOURCE_ENERGY),
-                    source_link.store[RESOURCE_ENERGY],
-                )
-                source_link.transferEnergy(
-                    controller_link,
-                    amount
-                )
-                #print('++++++++++++++++++++++++++++ transfer energy from', source_link, 'to', controller_link)
-                break
-        end = Game.cpu.getUsed()
-        #global cpustats
-        #cpustats['links'] = cpustats.get('links', 0) + end - start
+        target_links = []
+        if self.room.energyCapacityAvailable > 0:
+            # sources send to others, then controller
+            source_links = our_links.get_sources()
+            target_links.extend(our_links.get_others())
+            target_links.append(controller_link)
+        else:
+            # sources and others feed controller
+            target_links.append(controller_link)
+            source_links = our_links.get_sources()
+            source_links.extend(our_links.get_others())
+        self.debug_log('============================ running links in', self.room.name, our_links)
+        used_set = set()
+        done = self.execute_transfer(source_links, target_links, used_set)
+
+    def execute_transfer(self, source_links, target_links, used_set):
+        for target_link in target_links:
+            self.debug_log('target_link', target_link.id)
+            if target_link.store.getFreeCapacity(RESOURCE_ENERGY) >= self.LINK_MIN_TRANSFER_AMOUNT:
+                self.debug_log('////////////////////////////', target_link.id, 'link needs link filled')
+                for source_link in source_links:
+                    if source_link.cooldown != 0:
+                        self.debug_log('source link', source_link.id, 'is on cooldown for', source_link.cooldown)
+                        continue
+                    if used_set.includes(source_link.id):
+                        self.debug_log('source link', source_link.id, 'already used')
+                        continue
+                    if used_set.includes(target_link.id):
+                        self.debug_log('WARNING: target link', target_link.id, 'already used!?')
+                        continue
+                    if source_link.store[RESOURCE_ENERGY] < self.LINK_MIN_TRANSFER_AMOUNT:
+                        self.debug_log('source_link', source_link.id, 'does not have enough to send, it has:', source_link.store[RESOURCE_ENERGY])
+                        continue
+                    amount = min(
+                        target_link.store.getFreeCapacity(RESOURCE_ENERGY),
+                        source_link.store[RESOURCE_ENERGY],
+                    )
+                    error_code = source_link.transferEnergy(
+                        target_link,
+                        amount,
+                    )
+                    used_set.add(source_link.id)
+                    used_set.add(target_link.id)
+                    self.debug_log('++++++++++++++++++++++++++++ transfer energy from', source_link, 'to', target_link, ', error:', ERRORS[error_code])
+                    return True
+        return False
 
     def spawn_creeps(self):
         raise NotImplementedError
