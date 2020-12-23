@@ -15,6 +15,7 @@ __pragma__('noalias', 'update')
 
 class AbstractCreep:
     DEBUG = False
+    REMOVE_FLAG_ON_ARRIVAL = True
     ICON = '?'
     def __init__(self, creep, namee, creep_registry):
         self.creep = creep
@@ -32,11 +33,22 @@ class AbstractCreep:
         creep = self.creep
         if self.debug:
             creep.say(creep.name[:8] + self.ICON)
-        target = Game.flags[creep.name]
+
+        if creep.memory.target_flag != undefined:
+            target_flag_name = creep.memory.target_flag
+        else:
+            target_flag_name = creep.name
+
+        target = Game.flags[target_flag_name]
         if target:
-            if not creep.pos.isEqualTo(target):
+            if creep.pos.isEqualTo(target):
+                if self.REMOVE_FLAG_ON_ARRIVAL:
+                    target.remove()
+                else:
+                    return []
+            else:
                 return [ScheduledAction.moveTo(self.creep, target)]
-            target.remove()
+
         if creep.memory.room != undefined and creep.memory.room != creep.room.name:
             target_room = Game.rooms[creep.memory.room]
             if target_room == undefined:
