@@ -320,7 +320,8 @@ class RoomManagerRCL2(AbstractRoomManager):
         )
         controller_container = room.getPositionAt(path[1].x, path[1].y)
 
-        self.build_container(path[1].x, path[1].y)
+        if room.controller.level <= 4:
+            self.build_container(path[1].x, path[1].y)
 
         roads = []
         #if 1:
